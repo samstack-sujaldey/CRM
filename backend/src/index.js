@@ -3,6 +3,7 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const connectdb = require("./config/db");
 const leadRoutes = require("./routes/lead.routes");
+const metaRoutes = require("./routes/meta.routes");
 
 dotenv.config();
 connectdb();
@@ -16,6 +17,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/leads", leadRoutes);
+app.use("/api/meta", metaRoutes);
 
 app.listen(process.env.PORT, () => {
 	console.log(`server is running on port ${process.env.PORT}`);
