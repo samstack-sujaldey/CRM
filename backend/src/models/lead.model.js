@@ -1,0 +1,58 @@
+const mongoose = require("mongoose");
+
+const leadSchema = new mongoose.Schema(
+	{
+		name: {
+			type: String,
+			required: true,
+			trim: true,
+		},
+		email: {
+			type: String,
+			required: true,
+			trim: true,
+		},
+		phone: {
+			type: String,
+			required: true,
+			trim: true,
+		},
+		property: {
+			type: String,
+			required: true,
+			trim: true,
+		},
+		source: {
+			type: String,
+			enum: ["META", "MANUAL", "OTHER"],
+			default: "META",
+		},
+		status: {
+			type: String,
+			enum: [
+				"NEW",
+				"CONTACTED",
+				"INTERESTED",
+				"SITE_VISIT_SCHEDULED",
+				"SITE_VISITED",
+				"BOOKED",
+				"CLOSED",
+			],
+			default: "NEW",
+		},
+		metaLeadId: {
+			type: String,
+			unique: true,
+			sparse: true,
+		},
+		notes: {
+			type: String,
+		},
+		siteVisitDate: {
+			type: Date,
+		},
+	},
+	{ timestamps: true },
+);
+
+module.exports = mongoose.model("Lead", leadSchema);
