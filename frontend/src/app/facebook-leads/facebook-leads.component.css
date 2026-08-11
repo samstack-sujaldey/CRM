@@ -138,7 +138,7 @@ th {
 /* STATUS */
 
 .status-select {
-  width: 150px;
+  width: 220px;
   margin-top: 10px;
 }
 
@@ -149,6 +149,18 @@ th {
   text-align: center;
   padding: 40px;
   color: #777;
+}
+
+.status-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.confirm-button,
+.cancel-button {
+  width: 36px;
+  height: 36px;
 }
 
 
