@@ -22,11 +22,9 @@ import { MetaAuthService } from '../services/Meta_auth.service';
 @Component({
   selector: 'app-facebook-leads',
   standalone: true,
-
   imports: [
     CommonModule,
     FormsModule,
-
     MatButtonModule,
     MatCardModule,
     MatFormFieldModule,
@@ -36,7 +34,6 @@ import { MetaAuthService } from '../services/Meta_auth.service';
     MatTableModule,
     MatTooltipModule
   ],
-
   templateUrl: './facebook-leads.component.html',
   styleUrl: './facebook-leads.component.css'
 })
@@ -68,10 +65,19 @@ export class FacebookLeadsComponent implements OnInit {
   metaConnecting = false;
   metaStatusLoading = true;
 
+  // =========================
+  // PAGE & FORM SYNC STATE
+  // =========================
+  pages: any[] = [];
+  forms: any[] = [];
+  selectedPageId: string = '';
+  selectedFormId: string = '';
+  syncMessage: string = '';
+
   constructor(
     private leadService: FacebookLeadsService,
     private metaAuthService: MetaAuthService,
-    private route: ActivatedRoute, // <-- ADD THIS
+    private route: ActivatedRoute, 
     private router: Router
   ) {}
 
@@ -91,8 +97,9 @@ export class FacebookLeadsComponent implements OnInit {
         this.metaConnected = true;
         this.metaStatusLoading = false;
         
-        // 4. Now that we are authenticated, fetch the leads
+        // 4. Now that we are authenticated, fetch the leads and pages
         this.loadLeads();
+        this.loadPages();
       } else {
         // Normal page load (they are already logged in or need to log in)
         this.checkMetaStatus();
@@ -110,27 +117,26 @@ export class FacebookLeadsComponent implements OnInit {
   // =========================
 
   checkMetaStatus(): void {
-
     this.metaStatusLoading = true;
 
     this.metaAuthService.getStatus().subscribe({
-
       next: (response) => {
         this.metaConnected = !!response.connected;
         this.metaStatusLoading = false;
-      },
 
+        if (this.metaConnected) {
+          this.loadPages();
+        }
+      },
       error: (error: any) => {
         console.error('Error checking Meta connection status:', error);
         this.metaConnected = false;
         this.metaStatusLoading = false;
       }
-
     });
   }
 
   connectFacebook(): void {
-
     if (this.metaConnecting) {
       return;
     }
@@ -143,6 +149,7 @@ export class FacebookLeadsComponent implements OnInit {
         // just refresh the status to reflect it in the UI.
         if (!redirected) {
           this.metaConnected = true;
+          this.loadPages();
         }
       })
       .catch((error) => {
@@ -154,37 +161,65 @@ export class FacebookLeadsComponent implements OnInit {
   }
 
   // =========================
+  // PAGES & FORMS SYNC LOGIC
+  // =========================
+
+  loadPages(): void {
+    this.metaAuthService.getPages().subscribe({
+      next: (res) => {
+        this.pages = res.data || [];
+      },
+      error: (err) => {
+        console.error("Error loading Facebook pages:", err);
+      }
+    });
+  }
+
+  onPageSelect(event: any): void {
+    this.selectedPageId = event.target?.value || event;
+    this.forms = []; 
+    this.selectedFormId = '';
+    this.syncMessage = '';
+    
+    if (this.selectedPageId) {
+      this.metaAuthService.getPageForms(this.selectedPageId).subscribe({
+        next: (res) => {
+          // Meta graphs typically nest form array inside data.data
+          this.forms = res.data?.data || res.data || []; 
+        },
+        error: (err) => {
+          console.error("Error loading lead forms:", err);
+        }
+      });
+    }
+  }
+
+  onFormSelect(event: any): void {
+    this.selectedFormId = event.target?.value || event;
+    this.syncMessage = '';
+  }
+
+  // =========================
   // GET LEADS
   // =========================
 
   loadLeads(): void {
-
     this.loading = true;
 
     this.leadService.getLeads().subscribe({
-
       next: (response) => {
-
         if (response.success) {
           this.leads = response.data || [];
         } else {
           this.leads = [];
         }
-
         this.loading = false;
       },
-
       error: (error: any) => {
-
-        console.error(
-          'Error loading leads:',
-          error
-        );
-
+        console.error('Error loading leads:', error);
         this.leads = [];
         this.loading = false;
       }
-
     });
   }
 
@@ -193,31 +228,25 @@ export class FacebookLeadsComponent implements OnInit {
   // =========================
 
   get filteredLeads(): Lead[] {
-
     const search = this.searchText
       .toLowerCase()
       .trim();
 
     return this.leads.filter((lead: Lead) => {
-
       const matchesSearch =
         !search ||
         (lead.name || '')
           .toLowerCase()
           .includes(search) ||
-
         (lead.email || '')
           .toLowerCase()
           .includes(search) ||
-
         (lead.phone || '')
           .toLowerCase()
           .includes(search) ||
-
         (lead.property || '')
           .toLowerCase()
           .includes(search) ||
-
         (lead.source || '')
           .toLowerCase()
           .includes(search);
@@ -264,7 +293,6 @@ export class FacebookLeadsComponent implements OnInit {
     lead: Lead,
     newStatus: LeadStatus
   ): void {
-
     // Only change temporary value
     lead.pendingStatus = newStatus;
   }
@@ -274,7 +302,6 @@ export class FacebookLeadsComponent implements OnInit {
   // =========================
 
   confirmStatusChange(lead: Lead): void {
-
     if (
       !lead.pendingStatus ||
       lead.pendingStatus === lead.status
@@ -290,33 +317,19 @@ export class FacebookLeadsComponent implements OnInit {
         newStatus
       )
       .subscribe({
-
         next: (response) => {
-
           if (response.success) {
-
             // Update actual status
             lead.status = newStatus;
-
             // Remove temporary status
             delete lead.pendingStatus;
-
           }
-
         },
-
         error: (error: any) => {
-
-          console.error(
-            'Error updating status:',
-            error
-          );
-
-          // If backend fails,
-          // return dropdown to original status
+          console.error('Error updating status:', error);
+          // If backend fails, return dropdown to original status
           delete lead.pendingStatus;
         }
-
       });
   }
 
@@ -325,19 +338,33 @@ export class FacebookLeadsComponent implements OnInit {
   // =========================
 
   cancelStatusChange(lead: Lead): void {
-
-    // Remove temporary status.
-    // Dropdown automatically returns
-    // to lead.status.
+    // Remove temporary status. Dropdown automatically returns to lead.status.
     delete lead.pendingStatus;
   }
 
   // =========================
-  // SYNC
+  // SYNC FROM META DATABASE ROUTE
   // =========================
 
   syncLeads(): void {
+    if (!this.selectedPageId || !this.selectedFormId) {
+      this.syncMessage = "Please select both a Facebook Page and a Lead Form.";
+      return;
+    }
 
-    this.loadLeads();
+    this.loading = true;
+    this.syncMessage = "Syncing leads from Meta...";
+
+    this.metaAuthService.syncLeads(this.selectedPageId, this.selectedFormId).subscribe({
+      next: (res) => {
+        this.syncMessage = `Success! Synced ${res.totalFormMeta} leads from Meta.`;
+        this.loadLeads(); // Refresh table data
+      },
+      error: (err) => {
+        console.error("Error syncing leads from Meta:", err);
+        this.loading = false;
+        this.syncMessage = "Failed to sync leads from Meta.";
+      }
+    });
   }
 }

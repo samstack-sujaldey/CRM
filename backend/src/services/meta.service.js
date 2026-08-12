@@ -1,109 +1,95 @@
-const getMetaUser = async () => {
-	const accesstoken = process.env.META_ACCESS_TOKEN;
-	const apiVersion = process.env.META_API_VERSION;
+const axios = require("axios");
 
-	if (!accesstoken || !apiVersion) {
-		throw new Error("Missing required Meta API credentials");
-	}
+const getMetaUser = async (userAccessToken) => {
+  const apiVersion = process.env.META_API_VERSION || "v26.0";
 
-	const response = await fetch(
-		`https://graph.facebook.com/${apiVersion}/me`,
-		{
-			headers: {
-				Authorization: `Bearer ${accesstoken}`,
-			},
-		},
-	);
+  if (!userAccessToken) {
+    throw new Error("Missing required Meta API credentials");
+  }
 
-	const data = await response.json();
-
-	if (!response.ok) {
-		throw new Error(data.error?.message || "Meta API request failed");
-	}
-
-	return data;
+  try {
+    const response = await axios.get(
+      `https://graph.facebook.com/${apiVersion}/me`,
+      {
+        headers: {
+          Authorization: `Bearer ${userAccessToken}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.error?.message || "Meta API request failed");
+  }
 };
 
-const getPages = async () => {
-	const accesstoken = process.env.META_ACCESS_TOKEN;
-	const apiVersion = process.env.META_API_VERSION;
+const getPages = async (userAccessToken) => {
+  const apiVersion = process.env.META_API_VERSION || "v26.0";
 
-	if (!accesstoken || !apiVersion) {
-		throw new Error("Missing required Meta API credentials");
-	}
+  if (!userAccessToken) {
+    throw new Error("Missing required Meta API credentials");
+  }
 
-	const response = await fetch(
-		`https://graph.facebook.com/${apiVersion}/me/accounts`,
-		{
-			headers: {
-				Authorization: `Bearer ${accesstoken}`,
-			},
-		},
-	);
-
-	const data = await response.json();
-
-	if (!response.ok) {
-		throw new Error(data.error?.message || "Meta API request failed");
-	}
-
-	return data;
+  try {
+    const response = await axios.get(
+      `https://graph.facebook.com/${apiVersion}/me/accounts`,
+      {
+        headers: {
+          Authorization: `Bearer ${userAccessToken}`,
+        },
+      }
+    );
+    // This will return an array of pages, each containing its own 'access_token'
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.error?.message || "Meta API request failed");
+  }
 };
 
-const getPageForms = async (pageId) => {
-	const accesstoken = process.env.META_PAGE_ACCESS_TOKEN;
-	const apiVersion = process.env.META_API_VERSION;
+const getPageForms = async (pageId, pageAccessToken) => {
+  const apiVersion = process.env.META_API_VERSION || "v26.0";
 
-	if (!accesstoken || !apiVersion) {
-		throw new Error("Missing required Meta API credentials");
-	}
+  if (!pageAccessToken) {
+    throw new Error("Missing required Meta Page Access Token");
+  }
 
-	const response = await fetch(
-		`https://graph.facebook.com/${apiVersion}/${pageId}/leadgen_forms`,
-		{
-			headers: {
-				Authorization: `Bearer ${accesstoken}`,
-			},
-		},
-	);
-
-	const data = await response.json();
-
-	if (!response.ok) {
-		throw new Error(data.error?.message || "Failed to fetch lead forms");
-	}
-
-	return data;
+  try {
+    const response = await axios.get(
+      `https://graph.facebook.com/${apiVersion}/${pageId}/leadgen_forms`,
+      {
+        headers: {
+          Authorization: `Bearer ${pageAccessToken}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.error?.message || "Failed to fetch lead forms");
+  }
 };
 
-const getFormLeads = async (formId) => {
-	const accesstoken = process.env.META_ACCESS_TOKEN;
-	const apiVersion = process.env.META_API_VERSION;
+const getFormLeads = async (formId, pageAccessToken) => {
+  const apiVersion = process.env.META_API_VERSION || "v26.0";
 
-	if (!accesstoken) {
-		throw new Error("Meta Access Token is not configured");
-	}
+  if (!pageAccessToken) {
+    throw new Error("Meta Page Access Token is not configured");
+  }
+  if (!formId) {
+    throw new Error("Form Id is required");
+  }
 
-	if (!formId) {
-		throw new Error("Form Id is required");
-	}
-
-	const response = await fetch(
-		`https://graph.facebook.com/${apiVersion}/${formId}/leads`,
-		{
-			headers: {
-				Authorization: `Bearer ${accesstoken}`,
-			},
-		},
-	);
-
-	const data = await response.json();
-
-	if (!response.ok) {
-		throw new Error(data.error?.message || "Failed to fetch leads");
-	}
-
-	return data;
+  try {
+    const response = await axios.get(
+      `https://graph.facebook.com/${apiVersion}/${formId}/leads`,
+      {
+        headers: {
+          Authorization: `Bearer ${pageAccessToken}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.error?.message || "Failed to fetch leads");
+  }
 };
 
 module.exports = {

@@ -1,5 +1,7 @@
 const express = require("express");
 const router = express.Router();
+
+
 const metaController = require("../controllers/meta.controller");
 const authMiddleware = require("../middleware/auth.middleware");
 const { sendLeadEvent } = require("../services/capi.service");
@@ -10,11 +12,11 @@ router.get("/callback", metaController.metaAuthCallback);
 
 // 3. Check status (Requires authMiddleware because the user is logged in by this point)
 router.get("/status", authMiddleware, metaController.getMetaStatus);
-router.get("/me", metaController.getMetaUser);
-router.get("/pages", metaController.getPages);
-router.get("/pages/:pageId/forms", metaController.getPageForms);
-router.get("/forms/:formId/leads", metaController.getFormLeads);
-router.patch("/sync", metaController.syncLeads);
+router.get("/me", authMiddleware, metaController.getMetaUser);
+router.get("/pages", authMiddleware, metaController.getPages);
+router.get("/pages/:pageId/forms", authMiddleware, metaController.getPageForms);
+router.get("/forms/:formId/leads", authMiddleware, metaController.getFormLeads);
+router.patch("/sync", authMiddleware, metaController.syncLeads);
 
 router.post("/test-capi", async (req, res, next) => {
 	try {
