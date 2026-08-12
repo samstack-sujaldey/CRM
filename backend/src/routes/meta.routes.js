@@ -1,34 +1,20 @@
 const express = require("express");
 const router = express.Router();
 
-// Import your auth middleware (verifies the app's own JWT / identifies req.user)
-const authMiddleware = require("../middleware/auth.middleware");
-
-// Import the controller that holds all the Meta OAuth logic
 const {
   startMetaAuth,
   metaAuthCallback,
   getMetaStatus,
 } = require("../controllers/meta.controller");
+const authMiddleware = require("../middleware/auth.middleware");
 
-// ==========================================
-// 1. Authorize the User
-//    - authMiddleware confirms who the app user is
-//    - startMetaAuth then checks meta.model.js for an existing,
-//      still-valid connection before redirecting to Facebook
-// ==========================================
-router.get("/meta", authMiddleware, startMetaAuth);
+// 1. Start OAuth (No authMiddleware because they are logging in!)
+router.get("/", startMetaAuth);
 
-// ==========================================
-// 2 & 3. Retrieve Token and Store Meta Data
-//    (Facebook redirects here directly, so no authMiddleware -
-//    the user's identity comes from the signed `state` JWT instead)
-// ==========================================
-router.get("/meta/callback", metaAuthCallback);
+// 2. Callback (Where we create the user and save the token)
+router.get("/callback", metaAuthCallback);
 
-// ==========================================
-// 4. (Optional) Check connection status from the frontend
-// ==========================================
-router.get("/meta/status", authMiddleware, getMetaStatus);
+// 3. Check status (Requires authMiddleware because the user is logged in by this point)
+router.get("/status", authMiddleware, getMetaStatus);
 
 module.exports = router;

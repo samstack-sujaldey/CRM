@@ -12,16 +12,50 @@
       </p>
     </div>
 
-    <button
-      mat-raised-button
-      color="primary"
-      (click)="syncLeads()">
+    <div class="header-actions">
 
-      <mat-icon>sync</mat-icon>
+      <!-- META CONNECTION STATUS -->
 
-      Sync Leads
+      <ng-container *ngIf="!metaStatusLoading">
 
-    </button>
+        <button
+          *ngIf="!metaConnected"
+          mat-stroked-button
+          color="primary"
+          [disabled]="metaConnecting"
+          (click)="connectFacebook()">
+
+          <mat-icon>link</mat-icon>
+
+          {{ metaConnecting ? 'Connecting...' : 'Connect Facebook' }}
+
+        </button>
+
+        <span
+          *ngIf="metaConnected"
+          class="connected-badge"
+          matTooltip="Your Facebook account is connected">
+
+          <mat-icon>check_circle</mat-icon>
+
+          Facebook Connected
+
+        </span>
+
+      </ng-container>
+
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="syncLeads()">
+
+        <mat-icon>sync</mat-icon>
+
+        Sync Leads
+
+      </button>
+
+    </div>
 
   </div>
 

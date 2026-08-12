@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { FacebookLeadComponent } from './facebook-leads.component';
+import { FacebookLeadsComponent } from './facebook-leads.component';
 
-describe('FacebookLeadComponent', () => {
-  let component: FacebookLeadComponent;
-  let fixture: ComponentFixture<FacebookLeadComponent>;
+describe('FacebookLeadsComponent', () => {
+  let component: FacebookLeadsComponent;
+  let fixture: ComponentFixture<FacebookLeadsComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [FacebookLeadComponent]
+      imports: [FacebookLeadsComponent]
     })
     .compileComponents();
     
-    fixture = TestBed.createComponent(FacebookLeadComponent);
+    fixture = TestBed.createComponent(FacebookLeadsComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

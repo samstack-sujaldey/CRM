@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 
 import { MatButtonModule } from '@angular/material/button';
@@ -16,6 +17,7 @@ import {
   Lead,
   LeadStatus
 } from '../services/facebook-leads.service';
+import { MetaAuthService } from '../services/Meta_auth.service';
 
 @Component({
   selector: 'app-facebook-leads',
@@ -61,12 +63,94 @@ export class FacebookLeadsComponent implements OnInit {
   // Loading
   loading = false;
 
+  // Meta (Facebook) connection state
+  metaConnected = false;
+  metaConnecting = false;
+  metaStatusLoading = true;
+
   constructor(
-    private leadService: FacebookLeadsService
+    private leadService: FacebookLeadsService,
+    private metaAuthService: MetaAuthService,
+    private route: ActivatedRoute, // <-- ADD THIS
+    private router: Router
   ) {}
 
   ngOnInit(): void {
-    this.loadLeads();
+    // Check the URL for a token returning from the Facebook OAuth callback
+    this.route.queryParams.subscribe(params => {
+      const token = params['token'];
+      
+      if (token) {
+        // 1. Save the token to log the user in locally
+        localStorage.setItem('app_auth_token', token);
+        
+        // 2. Remove the token from the browser's address bar for security
+        this.router.navigate([], { replaceUrl: true });
+        
+        // 3. Update state
+        this.metaConnected = true;
+        this.metaStatusLoading = false;
+        
+        // 4. Now that we are authenticated, fetch the leads
+        this.loadLeads();
+      } else {
+        // Normal page load (they are already logged in or need to log in)
+        this.checkMetaStatus();
+        
+        // Only load leads if they actually have a token saved
+        if (localStorage.getItem('app_auth_token')) {
+          this.loadLeads();
+        }
+      }
+    });
+  }
+
+  // =========================
+  // META CONNECTION
+  // =========================
+
+  checkMetaStatus(): void {
+
+    this.metaStatusLoading = true;
+
+    this.metaAuthService.getStatus().subscribe({
+
+      next: (response) => {
+        this.metaConnected = !!response.connected;
+        this.metaStatusLoading = false;
+      },
+
+      error: (error: any) => {
+        console.error('Error checking Meta connection status:', error);
+        this.metaConnected = false;
+        this.metaStatusLoading = false;
+      }
+
+    });
+  }
+
+  connectFacebook(): void {
+
+    if (this.metaConnecting) {
+      return;
+    }
+
+    this.metaConnecting = true;
+
+    this.metaAuthService.connect()
+      .then((redirected) => {
+        // If not redirected, the user was already connected -
+        // just refresh the status to reflect it in the UI.
+        if (!redirected) {
+          this.metaConnected = true;
+        }
+      })
+      .catch((error) => {
+        console.error('Error starting Meta OAuth:', error);
+      })
+      .finally(() => {
+        this.metaConnecting = false;
+      });
   }
 
   // =========================

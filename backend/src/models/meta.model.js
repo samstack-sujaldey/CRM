@@ -2,20 +2,15 @@ const mongoose = require("mongoose");
 
 const metaConnectionSchema = new mongoose.Schema(
   {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      unique: true, // one Meta connection per app user - enforced at the DB level
-      index: true,
-    },
-
     metaUserId: {
       type: String,
       required: true,
+      unique:true,
       index: true,
     },
-
+    name:{
+      type:String
+    },
     accessToken: {
       type: String,
       required: true,
