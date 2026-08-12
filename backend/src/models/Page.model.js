@@ -2,10 +2,16 @@ const mongoose = require("mongoose");
 
 const pageSchema = new mongoose.Schema(
   {
+    // NEW: Strict relational reference to your User/MetaConnection model
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MetaConnection", // Ensure this matches your exact model name!
+      required: true,
+      index: true,
+    },
     metaUserId: {
       type: String,
       required: true,
-      index: true,
     },
     pageId: {
       type: String,
@@ -21,6 +27,10 @@ const pageSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    forms: [{
+      formId: String,
+      name: String
+    }]
   },
   { timestamps: true }
 );

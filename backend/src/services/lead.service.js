@@ -35,8 +35,17 @@ const updateLeadStatus = async (leadId, status) => {
 	return lead;
 };
 
-const getAllLeads = async () => {
-	return await Lead.find().sort({ createdAt: -1 });
+const getAllLeads = async (metaUserId, pageObjectId) => {
+    const query = { metaUserId: metaUserId };
+    
+    if (pageObjectId) {
+        query.page = pageObjectId; 
+    }
+
+    // Populate replaces the 'page' ID with the actual Page document
+    return await Lead.find(query)
+        .populate("page", "name pageId forms") 
+        .sort({ createdAt: -1 });
 };
 
 const getLeadById = async (LeadId) => {

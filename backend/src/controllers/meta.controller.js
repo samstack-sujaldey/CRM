@@ -1,3 +1,4 @@
+const Page = require("../models/page.model"); // Make sure this is imported at the top!
 const crypto = require("crypto");
 const axios = require("axios");
 const jwt = require("jsonwebtoken"); // <-- ADD THIS to sign tokens directly
@@ -8,7 +9,7 @@ const leadService = require("../services/lead.service");
 // 1. Start Meta OAuth (Remains exactly the same)
 const startMetaAuth = async (req, res) => {
   try {
-    const state = crypto.randomBytes(16).toString("hex"); 
+    const state = crypto.randomBytes(16).toString("hex");
     const authUrl = axios.getUri({
       url: "https://www.facebook.com/v26.0/dialog/oauth",
       params: {
@@ -16,13 +17,15 @@ const startMetaAuth = async (req, res) => {
         redirect_uri: process.env.META_REDIRECT_URI,
         config_id: process.env.META_CONFIG_ID,
         response_type: "code",
-        state, 
-      }
+        state,
+      },
     });
     return res.status(200).json({ success: true, authUrl });
   } catch (error) {
     console.error("Meta OAuth start error:", error);
-    res.status(500).json({ success: false, message: "Failed to start Meta OAuth" });
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to start Meta OAuth" });
   }
 };
 
@@ -32,40 +35,48 @@ const metaAuthCallback = async (req, res) => {
     const { code, error } = req.query;
 
     if (error || !code) {
-      return res.redirect(`${process.env.FRONTEND_URL}/login?error=oauth_failed`);
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/login?error=oauth_failed`,
+      );
     }
 
     // Step 1: Exchange code for access token
-    const tokenResponse = await axios.get("https://graph.facebook.com/v26.0/oauth/access_token", {
-      params: {
-        client_id: process.env.META_APP_ID,
-        client_secret: process.env.META_APP_SECRET,
-        redirect_uri: process.env.META_REDIRECT_URI,
-        code,
-      }
-    });
+    const tokenResponse = await axios.get(
+      "https://graph.facebook.com/v26.0/oauth/access_token",
+      {
+        params: {
+          client_id: process.env.META_APP_ID,
+          client_secret: process.env.META_APP_SECRET,
+          redirect_uri: process.env.META_REDIRECT_URI,
+          code,
+        },
+      },
+    );
     const tokenData = tokenResponse.data;
 
     // Step 2: Fetch Meta User Profile (Just need ID and Name now!)
-  const meResponse = await axios.get("https://graph.facebook.com/v26.0/me", {
+    const meResponse = await axios.get("https://graph.facebook.com/v26.0/me", {
       params: {
         fields: "id,name",
-        access_token: tokenData.access_token
-      }
+        access_token: tokenData.access_token,
+      },
     });
     const meData = meResponse.data;
 
     let grantedPermissions = [];
     try {
-      const permResponse = await axios.get("https://graph.facebook.com/v26.0/me/permissions", {
-        params: { access_token: tokenData.access_token }
-      });
-      
+      const permResponse = await axios.get(
+        "https://graph.facebook.com/v26.0/me/permissions",
+        {
+          params: { access_token: tokenData.access_token },
+        },
+      );
+
       // Meta returns an array of objects: { permission: "email", status: "granted" }
       if (permResponse.data && permResponse.data.data) {
         grantedPermissions = permResponse.data.data
-          .filter(p => p.status === "granted")
-          .map(p => p.permission);
+          .filter((p) => p.status === "granted")
+          .map((p) => p.permission);
       }
     } catch (permError) {
       console.error("Failed to fetch permissions:", permError.message);
@@ -83,26 +94,26 @@ const metaAuthCallback = async (req, res) => {
         name: meData.name,
         accessToken: tokenData.access_token,
         tokenType: tokenData.token_type || "bearer",
-        permissions:grantedPermissions,
+        permissions: grantedPermissions,
         expiresAt,
         configurationId: process.env.META_CONFIG_ID,
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true },
     );
 
     // Step 4: Sign a JWT using the MetaConnection's MongoDB _id
-    const appToken = jwt.sign(
-      { id: connection._id }, 
-      process.env.JWT_SECRET, 
-      { expiresIn: "7d" }
-    );
+    const appToken = jwt.sign({ id: connection._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
 
     // Step 5: Redirect to frontend with the token
-    return res.redirect(`${process.env.FRONTEND_URL}/facebook-leads?token=${appToken}`);
-    
+    return res.redirect(`${process.env.FRONTEND_URL}/login?token=${appToken}`);
   } catch (error) {
-    console.error("Meta OAuth callback error:", error.response?.data || error.message);
-    return res.redirect(`${process.env.FRONTEND_URL}/login?error=server_error`);
+    console.error(
+      "Meta OAuth callback error:",
+      error.response?.data || error.message,
+    );
+   return res.redirect(`${process.env.FRONTEND_URL}/login?error=oauth_failed`);
   }
 };
 
@@ -110,10 +121,12 @@ const metaAuthCallback = async (req, res) => {
 const getMetaStatus = async (req, res) => {
   try {
     // req.user is now the MetaConnection document itself
-    const connection = req.user; 
-    
-    const isConnected = connection && 
-      (!connection.expiresAt || new Date(connection.expiresAt).getTime() > Date.now());
+    const connection = req.user;
+
+    const isConnected =
+      connection &&
+      (!connection.expiresAt ||
+        new Date(connection.expiresAt).getTime() > Date.now());
 
     return res.status(200).json({
       success: true,
@@ -130,7 +143,7 @@ const getMetaUser = async (req, res, next) => {
   try {
     // req.user is populated by your authMiddleware
     const userAccessToken = req.user.accessToken;
-    
+
     const user = await metaService.getMetaUser(userAccessToken);
     res.json({
       success: true,
@@ -141,17 +154,19 @@ const getMetaUser = async (req, res, next) => {
   }
 };
 
-const Page = require("../models/page.model"); // Import the new model
 
 const getPages = async (req, res, next) => {
   try {
     if (!req.user || !req.user.accessToken) {
-      return res.status(401).json({ success: false, message: "Unauthorized or missing Meta token." });
+      return res
+        .status(401)
+        .json({
+          success: false,
+          message: "Unauthorized or missing Meta token.",
+        });
     }
     const userAccessToken = req.user.accessToken;
     const metaUserId = req.user.metaUserId;
-
-    
 
     // 1. Fetch the pages from Meta
     const pagesResponse = await metaService.getPages(userAccessToken);
@@ -169,7 +184,7 @@ const getPages = async (req, res, next) => {
           name: fbPage.name,
           accessToken: fbPage.access_token, // Save the Page Token securely!
         },
-        { upsert: true, new: true }
+        { upsert: true, new: true },
       );
       savedPages.push(page);
     }
@@ -192,14 +207,32 @@ const getPages = async (req, res, next) => {
 const getPageForms = async (req, res, next) => {
   try {
     const { pageId } = req.params;
-    // The frontend should pass the page-specific token in the query string: ?pageToken=xxx
-    // Fallback to user token just in case the user has sweeping admin privileges
-    const pageToken = req.query.pageToken || req.user.accessToken;
 
-    const forms = await metaService.getPageForms(pageId, pageToken);
+    const pageRecord = await Page.findOne({ pageId: pageId });
+    if (!pageRecord || !pageRecord.accessToken) {
+      return res.status(404).json({ success: false, message: "Page not found." });
+    }
+
+    // 1. Fetch live forms from Meta
+    const formsData = await metaService.getPageForms(pageId, pageRecord.accessToken);
+    
+    const extractedForms = formsData.data.map(form => ({
+      formId: form.id,
+      name: form.name
+    }));
+
+    // ✅ THE FIX: If the page is somehow missing the user ID, inject it before saving!
+    if (!pageRecord.user) {
+      pageRecord.user = req.user.id; 
+    }
+
+    // Update forms and save safely
+    pageRecord.forms = extractedForms;
+    await pageRecord.save();
+
     res.json({
       success: true,
-      data: forms,
+      data: extractedForms,
     });
   } catch (err) {
     next(err);
@@ -224,54 +257,73 @@ const getFormLeads = async (req, res, next) => {
 
 const syncLeads = async (req, res, next) => {
   try {
-    // Frontend only needs to provide the pageId and formId
+    // 1. Extract the IDs sent from the Angular frontend payload
     const { pageId, formId } = req.body;
 
-    if (!formId || !pageId) {
-      return res.status(400).json({
-        success: false,
-        message: "Both pageId and formId are required",
+    // 2. If they are missing, throw a 400 Bad Request (this is what you just experienced!)
+    if (!pageId || !formId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Both pageId and formId are required to sync leads." 
       });
     }
 
-    // 1. Retrieve the secure Page Token directly from your database
+    // 3. Find the specific page in your DB to get its secure access token
     const pageRecord = await Page.findOne({ pageId: pageId });
     if (!pageRecord || !pageRecord.accessToken) {
-      return res.status(404).json({ success: false, message: "Page token not found in database. Please resync pages." });
+      return res.status(404).json({ success: false, message: "Page token not found. Sync pages first." });
     }
 
-    // 2. Fetch leads using the secure database token
-    const metaResponse = await metaService.getFormLeads(formId, pageRecord.accessToken);
-    const leads = metaResponse.data || [];
-    const results = [];
+    // 4. Fetch the live leads from Meta using the correct Page Token
+    const leadsFromMeta = await metaService.getFormLeads(formId, pageRecord.accessToken);
 
-    for (const metaLead of leads) {
-      const fields = {};
+    if (!leadsFromMeta || !leadsFromMeta.data) {
+      return res.status(400).json({ success: false, message: "No leads returned from Meta." });
+    }
 
-      for (const field of metaLead.field_data || []) {
-        fields[field.name] = field.values?.[0] || "";
-      }
-
-      const leadData = {
-        metaLeadId: metaLead.id,
-        pageId: pageId, // Reference the page ID in your Lead model as you suggested
-        name: fields.full_name || "",
-        email: fields.email || "",
-        phone: fields.phone_number || "",
-        source: "META",
-        status: "NEW",
+    // 5. Loop through Meta's response and save each lead to your database
+    let newLeadsCount = 0;
+    for (const fbLead of leadsFromMeta.data) {
+      
+      // Helper function to extract specific fields from Meta's field_data array
+      const getFieldValue = (fieldName) => {
+        const field = fbLead.field_data.find(f => f.name === fieldName);
+        return field ? field.values[0] : "";
       };
 
+      const extractedName = getFieldValue("full_name") || getFieldValue("first_name") || "Unknown";
+      const extractedEmail = getFieldValue("email") || "no-email@provided.com";
+      const extractedPhone = getFieldValue("phone_number") || "";
+
+      // Format the data to match your Lead model exactly
+      const leadData = {
+        metaUserId: req.user.metaUserId,
+        page: pageRecord._id, // The Mongo ObjectId we added earlier!
+        formId: formId,
+        metaLeadId: fbLead.id,
+        name: extractedName,
+        email: extractedEmail,
+        phone: extractedPhone,
+        source: "META",
+        status: "NEW"
+      };
+
+      // Upsert the lead using your lead service
       const result = await leadService.createLeadIfNotExists(leadData);
-      results.push(result);
+      if (result.created) {
+        newLeadsCount++;
+      }
     }
 
-    res.json({
+    // 6. Send the success response back to Angular
+    res.status(200).json({
       success: true,
-      totalFormMeta: leads.length,
-      results,
+      message: "Sync completed successfully",
+      totalFormMeta: newLeadsCount
     });
+
   } catch (err) {
+    console.error("Error in syncLeads:", err);
     next(err);
   }
 };

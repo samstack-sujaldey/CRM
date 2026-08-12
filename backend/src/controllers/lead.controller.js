@@ -2,7 +2,11 @@ const leadService = require("../services/lead.service");
 
 const getLeads = async (req, res, next) => {
 	try {
-		const leads = await leadService.getAllLeads();
+        // Extract the logged-in user's ID
+        const metaUserId = req.user.metaUserId;
+
+        // Pass the ID to the service
+		const leads = await leadService.getAllLeads(metaUserId);
 		res.json({
 			success: true,
 			data: leads,
