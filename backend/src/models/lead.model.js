@@ -14,12 +14,12 @@ const leadSchema = new mongoose.Schema(
 		},
 		phone: {
 			type: String,
-			required: true,
 			trim: true,
+			default: "",
 		},
 		property: {
 			type: String,
-			required: true,
+			default: "",
 			trim: true,
 		},
 		source: {

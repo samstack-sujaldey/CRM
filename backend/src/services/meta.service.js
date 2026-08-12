@@ -80,6 +80,14 @@ const getFormLeads = async (formId) => {
 	const accesstoken = process.env.META_ACCESS_TOKEN;
 	const apiVersion = process.env.META_API_VERSION;
 
+	if (!accesstoken) {
+		throw new Error("Meta Access Token is not configured");
+	}
+
+	if (!formId) {
+		throw new Error("Form Id is required");
+	}
+
 	const response = await fetch(
 		`https://graph.facebook.com/${apiVersion}/${formId}/leads`,
 		{
@@ -90,6 +98,7 @@ const getFormLeads = async (formId) => {
 	);
 
 	const data = await response.json();
+
 	if (!response.ok) {
 		throw new Error(data.error?.message || "Failed to fetch leads");
 	}
@@ -101,5 +110,5 @@ module.exports = {
 	getMetaUser,
 	getPages,
 	getPageForms,
-	getFormLeads
+	getFormLeads,
 };

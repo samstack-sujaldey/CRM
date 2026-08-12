@@ -46,28 +46,27 @@ const createLead = async (req, res, next) => {
 
 const updateLeadStatus = async (req, res, next) => {
 	try {
-		const { status } = req.body;
-		if (!status) {
+		if (!req.body.status) {
 			res.status(400).json({
 				success: false,
 				message: "Status is required",
 			});
 		}
-		const lead = await leadService.updateLeadStatus(
+		const updateLead = await leadService.updateLeadStatus(
 			req.params.id,
 			req.body.status,
 		);
-		if (!lead) {
+		if (!updateLead) {
 			res.status(404).json({
 				success: false,
 				message: "Lead not Found",
 			});
 		}
 
-		res.json({
+		res.status(200).json({
 			success: true,
-			message: "Lead status updated",
-			data: lead,
+			message: "Lead status updated successfully",
+			data: updateLead,
 		});
 	} catch (err) {
 		next(err);
