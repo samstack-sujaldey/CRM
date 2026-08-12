@@ -1,13 +1,26 @@
 import { Routes } from '@angular/router';
-import { FacebookLeadsComponent } from './facebook-leads/facebook-leads.component'; // Adjust path as needed
+import { LoginComponent } from './login/login.component';
+import { FacebookPagesComponent } from './facebook-pages/facebook-pages.component';
+import { FacebookLeadsComponent } from './facebook-leads/facebook-leads.component';
+import { authGuard } from './auth.guard'; // <-- Import your new guard
 
 export const routes: Routes = [
-  // 1. Map the facebook-leads URL to your component
-  { path: 'facebook-leads', component: FacebookLeadsComponent },
+  // Public Route
+  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  { path: 'login', component: LoginComponent },
+
+  // Protected Routes (Notice the canActivate array!)
+  { 
+    path: 'facebook-pages', 
+    component: FacebookPagesComponent,
+    canActivate: [authGuard] 
+  },
+  { 
+    path: 'facebook-pages/:pageId/leads', 
+    component: FacebookLeadsComponent,
+    canActivate: [authGuard] 
+  },
   
-  // 2. Automatically redirect the base URL (localhost:4200) to the dashboard
-  { path: '', redirectTo: '/facebook-leads', pathMatch: 'full' },
-  
-  // 3. Catch-all for any typos in the URL
-  { path: '**', redirectTo: '/facebook-leads' }
+  // Catch-all redirects to login
+  { path: '**', redirectTo: 'login' }
 ];

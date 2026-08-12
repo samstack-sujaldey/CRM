@@ -86,7 +86,13 @@ export class MetaAuthService {
   }
 
   syncLeads(pageId: string, formId: string): Observable<any> {
-    const body = { pageId, formId };
-    return this.http.post(`${this.baseUrl}/sync`, body, { headers: this.getAuthHeaders() });
+    const payload = { 
+      pageId: pageId, 
+      formId: formId 
+    };
+
+    return this.http.post(`${this.baseUrl}/sync`, payload, {
+      headers: this.getAuthHeaders()
+    });
   }
 }

@@ -1,0 +1,62 @@
+.login-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f3f4f6; /* Light gray background */
+}
+
+.login-card {
+  max-width: 450px;
+  width: 100%;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+mat-card-header {
+  margin-bottom: 16px;
+}
+
+mat-card-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.login-content {
+  margin-bottom: 24px;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.error-box {
+  display: flex;
+  align-items: center;
+  background-color: #fef2f2;
+  color: #dc2626;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 16px;
+  font-size: 14px;
+  border: 1px solid #f87171;
+}
+
+.error-box mat-icon {
+  margin-right: 8px;
+}
+
+.login-actions {
+  display: flex;
+  justify-content: center;
+  padding: 0 !important;
+}
+
+.fb-button {
+  width: 100%;
+  padding: 24px 0 !important;
+  font-size: 16px;
+  font-weight: 600;
+  background-color: #1877F2 !important; /* Official Facebook Blue */
+  color: white !important;
+}

@@ -1,0 +1,33 @@
+<div class="login-wrapper">
+  <mat-card class="login-card">
+    <mat-card-header>
+      <div mat-card-avatar>
+        <mat-icon style="font-size: 40px; color: #1877F2; width: 40px; height: 40px;">facebook</mat-icon>
+      </div>
+      <mat-card-title>CRM Authentication</mat-card-title>
+      <mat-card-subtitle>Connect your Meta account to continue</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content class="login-content">
+      <p>By connecting, you allow this CRM to sync your Facebook Pages and Lead Forms automatically.</p>
+      
+      <!-- Error Message Box -->
+      <div *ngIf="errorMessage" class="error-box">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ errorMessage }}</span>
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions class="login-actions">
+      <button 
+        mat-raised-button 
+        color="primary" 
+        class="fb-button" 
+        (click)="connectFacebook()" 
+        [disabled]="isConnecting">
+        <mat-icon>link</mat-icon>
+        {{ isConnecting ? 'Connecting...' : 'Connect to Facebook' }}
+      </button>
+    </mat-card-actions>
+  </mat-card>
+</div>

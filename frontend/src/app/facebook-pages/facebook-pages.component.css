@@ -1,0 +1,103 @@
+/* facebook-pages.component.css */
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+}
+
+p {
+  color: #6b7280;
+  font-size: 15px;
+  margin: 0;
+}
+
+/* Card & Table Styling */
+mat-card {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Column Widths */
+.mat-column-pageId {
+  width: 25%;
+  color: #6b7280;
+  font-family: monospace;
+}
+
+.mat-column-name {
+  width: 50%;
+  font-size: 16px;
+  color: #111827;
+}
+
+.mat-column-actions {
+  width: 25%;
+  text-align: right;
+}
+
+/* Header Cells */
+th.mat-header-cell {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 16px;
+}
+
+/* Data Cells */
+td.mat-cell {
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Row Hover Effect */
+tr.mat-row {
+  transition: background-color 0.2s ease;
+}
+
+tr.mat-row:hover {
+  background-color: #f3f4f6;
+}
+
+/* No Data Row */
+.mat-cell[colspan] {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+  font-style: italic;
+  font-size: 15px;
+}
+
+/* Buttons */
+.mat-stroked-button {
+  border-color: #d1d5db;
+}
+
+.mat-raised-button {
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.mat-icon {
+  margin-right: 6px;
+  vertical-align: middle;
+}
