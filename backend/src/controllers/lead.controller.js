@@ -2,7 +2,17 @@ const leadService = require("../services/lead.service");
 
 const getLeads = async (req, res, next) => {
 	try {
-		const leads = await leadService.getAllLeads();
+		const { pageId } = req.query;
+
+		if (!pageId) {
+			return res.status(400).json({
+				success: false,
+				message: "pageId is required",
+			});
+		}
+
+		const leads = await leadService.getAllLeads(pageId);
+
 		res.json({
 			success: true,
 			data: leads,

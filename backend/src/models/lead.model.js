@@ -45,6 +45,21 @@ const leadSchema = new mongoose.Schema(
 			unique: true,
 			sparse: true,
 		},
+		pageId: {
+			type: String,
+			index: true,
+		},
+
+		formId: {
+			type: String,
+			index: true,
+		},
+
+		formName: {
+			type: String,
+			default: "",
+			trim: true,
+		},
 		notes: {
 			type: String,
 		},

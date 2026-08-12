@@ -1,4 +1,6 @@
 const Lead = require("../models/lead.model");
+const Page = require("../models/page.model");
+const metaService = require("./meta.service");
 
 const createLead = async (data) => {
 	return await Lead.create(data);
@@ -35,8 +37,89 @@ const updateLeadStatus = async (leadId, status) => {
 	return lead;
 };
 
-const getAllLeads = async () => {
-	return await Lead.find().sort({ createdAt: -1 });
+const getAllLeads = async (pageId) => {
+	if (!pageId) {
+		const error = new Error("pageId is required");
+		error.statusCode = 400;
+		throw error;
+	}
+
+	// 1. Find the selected page in our database
+	const page = await Page.findOne({ pageId });
+
+	if (!page) {
+		const error = new Error("Page not found");
+		error.statusCode = 404;
+		throw error;
+	}
+
+	// 2. Get the Page Access Token
+	const pageAccessToken = page.accessToken;
+
+	// 3. Get all forms belonging to this page
+	const formsResponse = await metaService.getPageForms(
+		pageId,
+		pageAccessToken
+	);
+
+	const forms = formsResponse.data || [];
+
+	// 4. Fetch leads for every form
+	const formsWithLeads = await Promise.all(
+    forms.map(async (form) => {
+        try {
+            const leadsResponse = await metaService.getFormLeads(
+                form.id,
+                pageAccessToken
+            );
+
+            const leads = (leadsResponse.data || []).map((lead) => {
+                const fieldData = {};
+
+                (lead.field_data || []).forEach((field) => {
+                    fieldData[field.name] = field.values?.[0] || "";
+                });
+
+                return {
+                    leadId: lead.id,
+                    createdTime: lead.created_time,
+
+                    name: fieldData.full_name || "",
+                    email: fieldData.email || "",
+                    phone: fieldData.phone_number || "",
+
+                    // Keep all other custom form fields too
+                    fields: fieldData,
+                };
+            });
+
+            return {
+                formId: form.id,
+                formName: form.name || "Unnamed Form",
+                leads,
+            };
+        } catch (error) {
+            console.error(
+                `Failed to fetch leads for form ${form.id}:`,
+                error.message
+            );
+
+            return {
+                formId: form.id,
+                formName: form.name || "Unnamed Form",
+                leads: [],
+                error: "Failed to fetch leads for this form",
+            };
+        }
+    })
+);
+
+	// 5. Return page + forms + leads
+	return {
+		pageId: page.pageId,
+		pageName: page.name,
+		forms: formsWithLeads,
+	};
 };
 
 const getLeadById = async (LeadId) => {

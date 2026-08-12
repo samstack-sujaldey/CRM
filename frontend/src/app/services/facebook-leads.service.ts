@@ -57,9 +57,14 @@ export class FacebookLeadsService {
     });
   }
 
-  getLeads(): Observable<LeadsResponse> {
-    return this.http.get<LeadsResponse>(this.apiUrl, { headers: this.getAuthHeaders() });
-  }
+ getLeads(pageId: string): Observable<any> {
+  return this.http.get<any>(
+    `${this.apiUrl}?pageId=${pageId}`,
+    {
+      headers: this.getAuthHeaders()
+    }
+  );
+}
 
   getLead(id: string): Observable<LeadResponse> {
     return this.http.get<LeadResponse>(`${this.apiUrl}/${id}`, { headers: this.getAuthHeaders() });

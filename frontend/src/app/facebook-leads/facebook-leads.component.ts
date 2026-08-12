@@ -72,6 +72,8 @@ export class FacebookLeadsComponent implements OnInit {
   forms: any[] = [];
   selectedPageId: string = '';
   selectedFormId: string = '';
+  pageLeadsData: any = null;
+loadingPageLeads = false;
   syncMessage: string = '';
 
   constructor(
@@ -98,7 +100,6 @@ export class FacebookLeadsComponent implements OnInit {
         this.metaStatusLoading = false;
         
         // 4. Now that we are authenticated, fetch the leads and pages
-        this.loadLeads();
         this.loadPages();
       } else {
         // Normal page load (they are already logged in or need to log in)
@@ -106,7 +107,7 @@ export class FacebookLeadsComponent implements OnInit {
         
         // Only load leads if they actually have a token saved
         if (localStorage.getItem('app_auth_token')) {
-          this.loadLeads();
+          this.loadPages();
         }
       }
     });
@@ -135,6 +136,26 @@ export class FacebookLeadsComponent implements OnInit {
       }
     });
   }
+
+  showPageLeads(page: any): void {
+  this.selectedPageId = page.pageId;
+  this.loadingPageLeads = true;
+  this.pageLeadsData = null;
+
+  this.leadService.getLeads(this.selectedPageId).subscribe({
+    next: (response) => {
+      if (response.success) {
+        this.pageLeadsData = response.data;
+      }
+
+      this.loadingPageLeads = false;
+    },
+    error: (error) => {
+      console.error('Error loading page leads:', error);
+      this.loadingPageLeads = false;
+    }
+  });
+}
 
   connectFacebook(): void {
     if (this.metaConnecting) {
@@ -203,26 +224,32 @@ export class FacebookLeadsComponent implements OnInit {
   // GET LEADS
   // =========================
 
-  loadLeads(): void {
-    this.loading = true;
-
-    this.leadService.getLeads().subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.leads = response.data || [];
-        } else {
-          this.leads = [];
-        }
-        this.loading = false;
-      },
-      error: (error: any) => {
-        console.error('Error loading leads:', error);
-        this.leads = [];
-        this.loading = false;
-      }
-    });
+loadLeads(): void {
+  if (!this.selectedPageId) {
+    this.leads = [];
+    return;
   }
 
+  this.loading = true;
+
+  this.leadService.getLeads(this.selectedPageId).subscribe({
+    next: (response) => {
+      if (response.success) {
+        this.pageLeadsData = response.data;
+      } else {
+        this.pageLeadsData = null;
+      }
+
+      this.loading = false;
+    },
+
+    error: (error: any) => {
+      console.error('Error loading page leads:', error);
+      this.pageLeadsData = null;
+      this.loading = false;
+    }
+  });
+}
   // =========================
   // FILTERED LEADS
   // =========================
