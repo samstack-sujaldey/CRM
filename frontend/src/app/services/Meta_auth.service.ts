@@ -26,7 +26,7 @@ export interface MetaStatusResponse {
 })
 export class MetaAuthService {
 
-  private readonly baseUrl = `${API_BASE_URL}/auth/meta`;
+  private readonly baseUrl = `${API_BASE_URL}/meta`;
 
   constructor(private http: HttpClient) {}
 

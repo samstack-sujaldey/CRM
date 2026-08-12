@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken"); // <-- ADD THIS to sign tokens directly
 const MetaConnection = require("../models/meta.model");
 
 // 1. Start Meta OAuth (Remains exactly the same)
-exports.startMetaAuth = async (req, res) => {
+const startMetaAuth = async (req, res) => {
   try {
     const state = crypto.randomBytes(16).toString("hex"); 
     const authUrl = axios.getUri({
@@ -25,7 +25,7 @@ exports.startMetaAuth = async (req, res) => {
 };
 
 // 2. Callback (Streamlined!)
-exports.metaAuthCallback = async (req, res) => {
+const metaAuthCallback = async (req, res) => {
   try {
     const { code, error } = req.query;
 
@@ -105,7 +105,7 @@ exports.metaAuthCallback = async (req, res) => {
 };
 
 // 3. Status Check (Streamlined!)
-exports.getMetaStatus = async (req, res) => {
+const getMetaStatus = async (req, res) => {
   try {
     // req.user is now the MetaConnection document itself
     const connection = req.user; 
@@ -223,9 +223,12 @@ const syncLeads = async (req, res, next) => {
 };
 
 module.exports = {
-	getMetaUser,
-	getPages,
-	getPageForms,
-	getFormLeads,
-	syncLeads,
+  startMetaAuth,
+  metaAuthCallback,
+  getMetaStatus,
+  getMetaUser,
+  getPages,
+  getPageForms,
+  getFormLeads,
+  syncLeads,
 };
