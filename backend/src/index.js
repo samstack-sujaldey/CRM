@@ -3,8 +3,7 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const connectdb = require("./config/db");
 const leadRoutes = require("./routes/lead.routes");
-const metaAuthRoutes = require("./routes/meta.routes");
-
+const metaRoutes = require("./routes/meta.routes");
 
 dotenv.config();
 connectdb();
@@ -18,7 +17,8 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/leads", leadRoutes);
-app.use('/api/auth/meta', metaAuthRoutes);
+app.use("/api/meta", metaRoutes);
+
 
 
 app.listen(process.env.PORT, () => {
