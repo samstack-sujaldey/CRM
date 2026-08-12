@@ -2,6 +2,8 @@ const crypto = require("crypto");
 const axios = require("axios");
 const jwt = require("jsonwebtoken"); // <-- ADD THIS to sign tokens directly
 const MetaConnection = require("../models/meta.model");
+const metaService = require("../services/meta.service");
+const leadService = require("../services/lead.service");
 
 // 1. Start Meta OAuth (Remains exactly the same)
 const startMetaAuth = async (req, res) => {
@@ -122,104 +124,156 @@ const getMetaStatus = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: "Failed to check status" });
   }
-};const metaService = require("../services/meta.service");
-const leadService = require("../services/lead.service");
-
-const getMetaUser = async (req, res, next) => {
-	try {
-		const user = await metaService.getMetaUser();
-		res.json({
-			success: true,
-			data: user,
-		});
-	} catch (err) {
-		next(err);
-	}
 };
 
+const getMetaUser = async (req, res, next) => {
+  try {
+    // req.user is populated by your authMiddleware
+    const userAccessToken = req.user.accessToken;
+    
+    const user = await metaService.getMetaUser(userAccessToken);
+    res.json({
+      success: true,
+      data: user,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const Page = require("../models/page.model"); // Import the new model
+
 const getPages = async (req, res, next) => {
-	try {
-		const pages = await metaService.getPages();
-		res.json({
-			success: true,
-			data: pages,
-		});
-	} catch (err) {
-		next(err);
-	}
+  try {
+    if (!req.user || !req.user.accessToken) {
+      return res.status(401).json({ success: false, message: "Unauthorized or missing Meta token." });
+    }
+    const userAccessToken = req.user.accessToken;
+    const metaUserId = req.user.metaUserId;
+
+    
+
+    // 1. Fetch the pages from Meta
+    const pagesResponse = await metaService.getPages(userAccessToken);
+    const fbPages = pagesResponse.data || [];
+
+    const savedPages = [];
+
+    // 2. Save or update each page in your database
+    for (const fbPage of fbPages) {
+      const page = await Page.findOneAndUpdate(
+        { pageId: fbPage.id },
+        {
+          metaUserId: metaUserId,
+          pageId: fbPage.id,
+          name: fbPage.name,
+          accessToken: fbPage.access_token, // Save the Page Token securely!
+        },
+        { upsert: true, new: true }
+      );
+      savedPages.push(page);
+    }
+
+    // 3. Strip the access tokens before sending to the frontend for security
+    const safePagesForFrontend = savedPages.map((page) => ({
+      pageId: page.pageId,
+      name: page.name,
+    }));
+
+    res.json({
+      success: true,
+      data: safePagesForFrontend,
+    });
+  } catch (err) {
+    next(err);
+  }
 };
 
 const getPageForms = async (req, res, next) => {
-	try {
-		const { pageId } = req.params;
-		const forms = await metaService.getPageForms(pageId);
-		res.json({
-			success: true,
-			data: forms,
-		});
-	} catch (err) {
-		next(err);
-	}
+  try {
+    const { pageId } = req.params;
+    // The frontend should pass the page-specific token in the query string: ?pageToken=xxx
+    // Fallback to user token just in case the user has sweeping admin privileges
+    const pageToken = req.query.pageToken || req.user.accessToken;
+
+    const forms = await metaService.getPageForms(pageId, pageToken);
+    res.json({
+      success: true,
+      data: forms,
+    });
+  } catch (err) {
+    next(err);
+  }
 };
 
 const getFormLeads = async (req, res, next) => {
-	try {
-		const { formId } = req.params;
-		const leads = await metaService.getFormLeads(formId);
-		res.json({
-			success: true,
-			data: leads,
-		});
-	} catch (err) {
-		next(err);
-	}
+  try {
+    const { formId } = req.params;
+    // Extract page token from query string
+    const pageToken = req.query.pageToken || req.user.accessToken;
+
+    const leads = await metaService.getFormLeads(formId, pageToken);
+    res.json({
+      success: true,
+      data: leads,
+    });
+  } catch (err) {
+    next(err);
+  }
 };
 
 const syncLeads = async (req, res, next) => {
-	try {
-		const { formId } = req.body;
+  try {
+    // Frontend only needs to provide the pageId and formId
+    const { pageId, formId } = req.body;
 
-		if (!formId) {
-			return res.status(400).json({
-				success: false,
-				message: "Form Id is required",
-			});
-		}
+    if (!formId || !pageId) {
+      return res.status(400).json({
+        success: false,
+        message: "Both pageId and formId are required",
+      });
+    }
 
-		const metaResponse = await metaService.getFormLeads(formId);
+    // 1. Retrieve the secure Page Token directly from your database
+    const pageRecord = await Page.findOne({ pageId: pageId });
+    if (!pageRecord || !pageRecord.accessToken) {
+      return res.status(404).json({ success: false, message: "Page token not found in database. Please resync pages." });
+    }
 
-		const leads = metaResponse.data || [];
+    // 2. Fetch leads using the secure database token
+    const metaResponse = await metaService.getFormLeads(formId, pageRecord.accessToken);
+    const leads = metaResponse.data || [];
+    const results = [];
 
-		const results = [];
+    for (const metaLead of leads) {
+      const fields = {};
 
-		for (const metaLead of leads) {
-			const fields = {};
+      for (const field of metaLead.field_data || []) {
+        fields[field.name] = field.values?.[0] || "";
+      }
 
-			for (const field of metaLead.field_data || []) {
-				fields[field.name] = field.values?.[0] || "";
-			}
+      const leadData = {
+        metaLeadId: metaLead.id,
+        pageId: pageId, // Reference the page ID in your Lead model as you suggested
+        name: fields.full_name || "",
+        email: fields.email || "",
+        phone: fields.phone_number || "",
+        source: "META",
+        status: "NEW",
+      };
 
-			const leadData = {
-				metaLeadId: metaLead.id,
-				name: fields.full_name || "",
-				email: fields.email || "",
-				phone: fields.phone_number || "",
-				source: "META",
-				status: "NEW",
-			};
+      const result = await leadService.createLeadIfNotExists(leadData);
+      results.push(result);
+    }
 
-			const result = await leadService.createLeadIfNotExists(leadData);
-			results.push(result);
-		}
-
-		res.json({
-			success: true,
-			totalFormMeta: leads.length,
-			results,
-		});
-	} catch (err) {
-		next(err);
-	}
+    res.json({
+      success: true,
+      totalFormMeta: leads.length,
+      results,
+    });
+  } catch (err) {
+    next(err);
+  }
 };
 
 module.exports = {

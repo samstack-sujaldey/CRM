@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 export type LeadStatus =
@@ -24,8 +24,6 @@ export interface Lead {
   siteVisitDate?: string;
   createdAt?: string;
   updatedAt?: string;
-
-  // Frontend-only field
   pendingStatus?: LeadStatus;
 }
 
@@ -45,35 +43,37 @@ export interface LeadResponse {
 })
 export class FacebookLeadsService {
 
-  private apiUrl = 'http://localhost:5000/api/leads';
+  private apiUrl = 'http://localhost:5000/api/leads'; // Ensure this matches your backend
 
   constructor(private http: HttpClient) {}
 
+  // ==========================================
+  // Injects the JWT token into your requests
+  // ==========================================
+  private getAuthHeaders(): HttpHeaders {
+    const token = localStorage.getItem('app_auth_token');
+    return new HttpHeaders({
+      'Authorization': `Bearer ${token}`
+    });
+  }
+
   getLeads(): Observable<LeadsResponse> {
-    return this.http.get<LeadsResponse>(this.apiUrl);
+    return this.http.get<LeadsResponse>(this.apiUrl, { headers: this.getAuthHeaders() });
   }
 
   getLead(id: string): Observable<LeadResponse> {
-    return this.http.get<LeadResponse>(
-      `${this.apiUrl}/${id}`
-    );
+    return this.http.get<LeadResponse>(`${this.apiUrl}/${id}`, { headers: this.getAuthHeaders() });
   }
 
   createLead(lead: Partial<Lead>): Observable<LeadResponse> {
-    return this.http.post<LeadResponse>(
-      this.apiUrl,
-      lead
-    );
+    return this.http.post<LeadResponse>(this.apiUrl, lead, { headers: this.getAuthHeaders() });
   }
 
-  updateLeadStatus(
-    id: string,
-    status: LeadStatus
-  ): Observable<LeadResponse> {
-
+  updateLeadStatus(id: string, status: LeadStatus): Observable<LeadResponse> {
     return this.http.patch<LeadResponse>(
       `${this.apiUrl}/${id}/status`,
-      { status }
+      { status },
+      { headers: this.getAuthHeaders() }
     );
   }
 }

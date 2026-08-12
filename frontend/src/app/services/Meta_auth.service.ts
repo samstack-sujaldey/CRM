@@ -1,9 +1,7 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs'; // <-- Added 'of' here
 
-// Set this to your actual API base URL (e.g. 'http://localhost:5000/api'
-// or 'https://api.yourapp.com/api')
 const API_BASE_URL = 'http://localhost:5000/api';
 
 export interface MetaStartAuthResponse {
@@ -26,31 +24,23 @@ export interface MetaStatusResponse {
 })
 export class MetaAuthService {
 
-  private readonly baseUrl = `${API_BASE_URL}/meta`;
+  private readonly baseUrl = `${API_BASE_URL}/meta`; // Ensure this matches your Node routes!
 
   constructor(private http: HttpClient) {}
 
-  // ==========================================
-  // Helper function to attach the token
-  // ==========================================
   private getAuthHeaders(): HttpHeaders {
     const token = localStorage.getItem('app_auth_token');
     return new HttpHeaders({
-      'Authorization': `Bearer ${token}` // Injects the token to pass your authMiddleware
+      'Authorization': `Bearer ${token}` 
     });
   }
 
-  // Checks whether the current user already has a valid Meta connection.
-  // Safe to call anytime - never triggers the OAuth flow itself.
   getStatus(): Observable<MetaStatusResponse> {
     const token = localStorage.getItem('app_auth_token');
     
-    // If there is no token, don't even bother asking the backend
     if (!token) {
-      import('rxjs').then(({ of }) => {}); // Ensure 'of' is imported at the top if using this
-      // Return a fake "not connected" response immediately
-      // Alternatively, just import { of } from 'rxjs'; at the top of your file
-      // return of({ success: true, connected: false });
+      // Returns a safe fallback instantly without hitting the backend
+      return of({ success: true, connected: false });
     }
 
     return this.http.get<MetaStatusResponse>(`${this.baseUrl}/status`, {
@@ -58,17 +48,11 @@ export class MetaAuthService {
     });
   }
 
-  // Asks the backend to either confirm an existing connection or hand back
-  // a Facebook authUrl to redirect the user to. Pass force=true to make the
-  // user re-consent even if a valid connection already exists.
   startAuth(force = false): Observable<MetaStartAuthResponse> {
     const url = force ? `${this.baseUrl}?force=true` : this.baseUrl;
-    // No headers needed here, as the user isn't logged in until after this flow completes
     return this.http.get<MetaStartAuthResponse>(url);
   }
 
-  // Convenience helper: calls startAuth() and, if not already connected,
-  // navigates the browser to Facebook. Returns true if a redirect happened.
   connect(force = false): Promise<boolean> {
     return new Promise((resolve, reject) => {
       this.startAuth(force).subscribe({
@@ -87,5 +71,22 @@ export class MetaAuthService {
         error: (err) => reject(err)
       });
     });
+  }
+
+  // ==========================================
+  // NEW METHODS FOR SYNCING
+  // ==========================================
+  
+  getPages(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/pages`, { headers: this.getAuthHeaders() });
+  }
+
+  getPageForms(pageId: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/pages/${pageId}/forms`, { headers: this.getAuthHeaders() });
+  }
+
+  syncLeads(pageId: string, formId: string): Observable<any> {
+    const body = { pageId, formId };
+    return this.http.post(`${this.baseUrl}/sync`, body, { headers: this.getAuthHeaders() });
   }
 }
