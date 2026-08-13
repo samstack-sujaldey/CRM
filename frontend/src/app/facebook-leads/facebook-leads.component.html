@@ -1,26 +1,50 @@
 <div class="page-container">
 
-  <!-- HEADER -->
-  <div class="page-header">
+  <!-- ========================================== -->
+  <!-- HEADER & FILTERS                           -->
+  <!-- ========================================== -->
+  <div class="page-header" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
     <div>
-      <h1>Facebook Leads for Page: {{ pageName }}</h1>
-      <p>Manage lead forms and synced leads from your Meta campaigns</p>
+      <h1 style="margin: 0;">Facebook Leads for Page: {{ pageName }}</h1>
+      <p style="margin: 5px 0 0 0;">Manage lead forms and synced leads from your Meta campaigns</p>
     </div>
 
-    <div class="header-actions">
-      <button mat-stroked-button color="primary" routerLink="/facebook-pages">
+    <div class="header-actions" style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+      
+      <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+        <mat-label>Search leads</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput [(ngModel)]="searchText" placeholder="Name, phone or email">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="status-filter" subscriptSizing="dynamic">
+        <mat-label>Status</mat-label>
+        <mat-select [(ngModel)]="selectedStatus">
+          <mat-option value="ALL">All Status</mat-option>
+          <mat-option value="NEW">New</mat-option>
+          <mat-option value="CONTACTED">Contacted</mat-option>
+          <mat-option value="QUALIFIED">Qualified</mat-option>
+          <mat-option value="SITE_VISIT_SCHEDULED">Site Visit Scheduled</mat-option>
+          <mat-option value="SITE_VISITED">Site Visit Completed</mat-option>
+          <mat-option value="NEGOTIATION">Negotiation / Booking</mat-option>
+          <mat-option value="CLOSED_WON">Closed Won (Purchase)</mat-option>
+          <mat-option value="CLOSED_LOST">Closed Lost (Junk)</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-stroked-button color="primary" routerLink="/facebook-pages" style="height: 48px;">
         <mat-icon>arrow_back</mat-icon>
         Back to Pages
       </button>
+      
     </div>
   </div>
 
 
   <!-- ========================================== -->
-  <!-- STATISTICS GRID -->
+  <!-- STATISTICS GRID                            -->
   <!-- ========================================== -->
   <div class="stats-grid">
-
     <mat-card class="stat-card">
       <mat-card-content>
         <div class="stat-label">Total Leads</div>
@@ -48,371 +72,129 @@
         <div class="stat-value">{{ bookings }}</div>
       </mat-card-content>
     </mat-card>
-
   </div>
 
 
   <!-- ========================================== -->
-  <!-- SEARCH + STATUS FILTER -->
-  <!-- ========================================== -->
-  <mat-card class="filter-card" style="margin-bottom: 24px;">
-
-    <mat-form-field appearance="outline" class="search-field">
-      <mat-label>Search leads</mat-label>
-      <mat-icon matPrefix>search</mat-icon>
-
-      <input
-        matInput
-        [(ngModel)]="searchText"
-        placeholder="Name, phone or email">
-    </mat-form-field>
-
-
-    <mat-form-field appearance="outline" class="status-filter">
-      <mat-label>Status</mat-label>
-
-      <mat-select [(ngModel)]="selectedStatus">
-
-        <mat-option value="ALL">
-          All Status
-        </mat-option>
-
-        <mat-option value="NEW">
-          New
-        </mat-option>
-
-        <mat-option value="CONTACTED">
-          Contacted
-        </mat-option>
-
-        <mat-option value="QUALIFIED">
-          Qualified
-        </mat-option>
-
-        <mat-option value="SITE_VISIT_SCHEDULED">
-          Site Visit Scheduled
-        </mat-option>
-
-        <mat-option value="SITE_VISITED">
-          Site Visit Completed
-        </mat-option>
-
-        <mat-option value="NEGOTIATION">
-          Negotiation / Booking
-        </mat-option>
-
-        <mat-option value="CLOSED_WON">
-          Closed Won (Purchase)
-        </mat-option>
-
-        <mat-option value="CLOSED_LOST">
-          Closed Lost (Junk)
-        </mat-option>
-
-      </mat-select>
-    </mat-form-field>
-
-  </mat-card>
-
-
-  <!-- ========================================== -->
-  <!-- LEAD FORMS -->
+  <!-- LEAD FORMS                                 -->
   <!-- ========================================== -->
   <mat-card class="table-card" style="margin-bottom: 24px;">
-
     <mat-card-header style="padding: 15px 15px 0 15px;">
-
-      <mat-card-title>
-        Available Lead Forms
-      </mat-card-title>
-
-      <mat-card-subtitle>
-        Sync leads from these active Meta forms
-      </mat-card-subtitle>
-
+      <mat-card-title>Available Lead Forms</mat-card-title>
+      <mat-card-subtitle>Sync leads from these active Meta forms</mat-card-subtitle>
     </mat-card-header>
 
-
-    <!-- SYNC MESSAGE -->
-    <p
-      *ngIf="syncMessage"
-      style="padding-left: 15px;"
-      [style.color]="syncMessage.includes('Success') ? 'green' : 'red'">
-
+    <p *ngIf="syncMessage" style="padding-left: 15px;" [style.color]="syncMessage.includes('Success') ? 'green' : 'red'">
       <strong>{{ syncMessage }}</strong>
-
     </p>
 
-
     <div class="table-wrapper">
-
-      <table
-        mat-table
-        [dataSource]="forms"
-        *ngIf="forms.length > 0">
-
-
+      <table mat-table [dataSource]="forms" *ngIf="forms.length > 0">
+        
         <!-- FORM NAME -->
         <ng-container matColumnDef="formName">
-
-          <th mat-header-cell *matHeaderCellDef>
-            Form Name
-          </th>
-
-          <td mat-cell *matCellDef="let form">
-            <strong>{{ form.name }}</strong>
-          </td>
-
+          <th mat-header-cell *matHeaderCellDef> Form Name </th>
+          <td mat-cell *matCellDef="let form"> <strong>{{ form.name }}</strong> </td>
         </ng-container>
-
 
         <!-- ACTION -->
         <ng-container matColumnDef="actions">
-
-          <th mat-header-cell *matHeaderCellDef>
-            Action
-          </th>
-
+          <th mat-header-cell *matHeaderCellDef> Action </th>
           <td mat-cell *matCellDef="let form">
-
-            <button
-              mat-raised-button
-              color="primary"
-              (click)="syncFormLeads(form.formId || form.id)"
-              [disabled]="isLoadingForms">
-
-              <mat-icon>sync</mat-icon>
-              Sync Leads
-
+            <button mat-raised-button color="primary" (click)="syncFormLeads(form.formId || form.id)" [disabled]="isLoadingForms">
+              <mat-icon>sync</mat-icon> Sync Leads
             </button>
-
           </td>
-
         </ng-container>
 
-
         <!-- FORM TABLE ROWS -->
-        <tr
-          mat-header-row
-          *matHeaderRowDef="['formName', 'actions']">
-        </tr>
-
-        <tr
-          mat-row
-          *matRowDef="let row; columns: ['formName', 'actions'];">
-        </tr>
-
+        <tr mat-header-row *matHeaderRowDef="['formName', 'actions']"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['formName', 'actions'];"></tr>
       </table>
 
-
-      <div
-        *ngIf="forms.length === 0 && !isLoadingForms"
-        style="padding: 20px; text-align: center;">
-
+      <div *ngIf="forms.length === 0 && !isLoadingForms" style="padding: 20px; text-align: center;">
         No active lead forms found for this page.
-
       </div>
-
     </div>
-
   </mat-card>
 
 
   <!-- ========================================== -->
-  <!-- LEADS TABLE -->
+  <!-- LEADS TABLE                                -->
   <!-- ========================================== -->
   <mat-card class="table-card">
-
     <div class="table-wrapper">
-
       <table mat-table [dataSource]="filteredLeads">
-
 
         <!-- LEAD -->
         <ng-container matColumnDef="lead">
-
-          <th mat-header-cell *matHeaderCellDef>
-            Lead
-          </th>
-
+          <th mat-header-cell *matHeaderCellDef> Lead </th>
           <td mat-cell *matCellDef="let lead">
-
             <div class="lead-cell">
-
-              <div class="avatar">
-                {{ lead.name?.charAt(0) || '?' }}
-              </div>
-
+              <div class="avatar">{{ lead.name?.charAt(0) || '?' }}</div>
               <div class="lead-details">
-
-                <strong>
-                  {{ lead.name }}
-                </strong>
-
-                <span>
-                  {{ lead.email }}
-                </span>
-
+                <strong>{{ lead.name }}</strong>
+                <span>{{ lead.email }}</span>
               </div>
-
             </div>
-
           </td>
-
         </ng-container>
-
 
         <!-- PHONE -->
         <ng-container matColumnDef="phone">
-
-          <th mat-header-cell *matHeaderCellDef>
-            Phone
-          </th>
-
-          <td mat-cell *matCellDef="let lead">
-            {{ lead.phone }}
-          </td>
-
+          <th mat-header-cell *matHeaderCellDef> Phone </th>
+          <td mat-cell *matCellDef="let lead">{{ lead.phone }}</td>
         </ng-container>
-
 
         <!-- DATE -->
         <ng-container matColumnDef="date">
-
-          <th mat-header-cell *matHeaderCellDef>
-            Date
-          </th>
-
-          <td mat-cell *matCellDef="let lead">
-            {{ lead.createdAt | date:'dd/MM/yyyy' }}
-          </td>
-
+          <th mat-header-cell *matHeaderCellDef> Date </th>
+          <td mat-cell *matCellDef="let lead">{{ lead.createdAt | date:'dd/MM/yyyy' }}</td>
         </ng-container>
-
 
         <!-- STATUS -->
         <ng-container matColumnDef="status">
-
-          <th mat-header-cell *matHeaderCellDef>
-            Status
-          </th>
-
+          <th mat-header-cell *matHeaderCellDef> Status </th>
           <td mat-cell *matCellDef="let lead">
-
             <div class="status-container">
-
-              <mat-form-field
-                appearance="outline"
-                class="status-select">
-
-                <mat-select
-                  [value]="lead.pendingStatus || lead.status"
-                  (selectionChange)="selectStatus(lead, $event.value)">
-
-                  <mat-option value="NEW">
-                    New
-                  </mat-option>
-
-                  <mat-option value="CONTACTED">
-                    Contacted
-                  </mat-option>
-
-                  <mat-option value="QUALIFIED">
-                    Qualified
-                  </mat-option>
-
-                  <mat-option value="SITE_VISIT_SCHEDULED">
-                    Site Visit Scheduled
-                  </mat-option>
-
-                  <mat-option value="SITE_VISITED">
-                    Site Visit Completed
-                  </mat-option>
-
-                  <mat-option value="NEGOTIATION">
-                    Negotiation / Booking
-                  </mat-option>
-
-                  <mat-option value="CLOSED_WON">
-                    Closed Won (Purchase)
-                  </mat-option>
-
-                  <mat-option value="CLOSED_LOST">
-                    Closed Lost (Junk)
-                  </mat-option>
-
+              <mat-form-field appearance="outline" class="status-select">
+                <mat-select [value]="lead.pendingStatus || lead.status" (selectionChange)="selectStatus(lead, $event.value)">
+                  <mat-option value="NEW">New</mat-option>
+                  <mat-option value="CONTACTED">Contacted</mat-option>
+                  <mat-option value="QUALIFIED">Qualified</mat-option>
+                  <mat-option value="SITE_VISIT_SCHEDULED">Site Visit Scheduled</mat-option>
+                  <mat-option value="SITE_VISITED">Site Visit Completed</mat-option>
+                  <mat-option value="NEGOTIATION">Negotiation / Booking</mat-option>
+                  <mat-option value="CLOSED_WON">Closed Won (Purchase)</mat-option>
+                  <mat-option value="CLOSED_LOST">Closed Lost (Junk)</mat-option>
                 </mat-select>
-
               </mat-form-field>
 
-
               <!-- CONFIRM / CANCEL -->
-              <ng-container
-                *ngIf="lead.pendingStatus && lead.pendingStatus !== lead.status">
-
-                <button
-                  mat-icon-button
-                  color="primary"
-                  class="confirm-button"
-                  matTooltip="Confirm"
-                  (click)="confirmStatusChange(lead)">
-
+              <ng-container *ngIf="lead.pendingStatus && lead.pendingStatus !== lead.status">
+                <button mat-icon-button color="primary" class="confirm-button" matTooltip="Confirm" (click)="confirmStatusChange(lead)">
                   <mat-icon>check</mat-icon>
-
                 </button>
-
-
-                <button
-                  mat-icon-button
-                  color="warn"
-                  class="cancel-button"
-                  matTooltip="Cancel"
-                  (click)="cancelStatusChange(lead)">
-
+                <button mat-icon-button color="warn" class="cancel-button" matTooltip="Cancel" (click)="cancelStatusChange(lead)">
                   <mat-icon>close</mat-icon>
-
                 </button>
-
               </ng-container>
-
             </div>
-
           </td>
-
         </ng-container>
 
-
         <!-- TABLE HEADER -->
-        <tr
-          mat-header-row
-          *matHeaderRowDef="displayedColumns">
-        </tr>
-
-
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
         <!-- TABLE ROW -->
-        <tr
-          mat-row
-          *matRowDef="let row; columns: displayedColumns">
-        </tr>
-
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
 
         <!-- NO DATA -->
         <tr matNoDataRow>
-
-          <td
-            class="mat-cell"
-            [attr.colspan]="displayedColumns.length">
-
-            No leads found.
-
-          </td>
-
+          <td class="mat-cell" [attr.colspan]="displayedColumns.length">No leads found.</td>
         </tr>
 
       </table>
-
     </div>
-
   </mat-card>
 
 </div>
