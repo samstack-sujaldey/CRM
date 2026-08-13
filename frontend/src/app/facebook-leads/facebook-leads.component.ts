@@ -13,6 +13,7 @@ import { MatTableModule } from "@angular/material/table";
 import { MatTooltipModule } from "@angular/material/tooltip";
 import { MatDialog, MatDialogModule } from "@angular/material/dialog";
 import { MatSnackBar, MatSnackBarModule } from "@angular/material/snack-bar";
+
 import { DealAmountDialogComponent } from "./deal-amount-dialog.component";
 
 import {
@@ -62,7 +63,10 @@ export class FacebookLeadsComponent implements OnInit {
 	isLoadingForms = false;
 	syncMessage = "";
 
-	// Leads State
+	// =========================
+	// LEADS STATE
+	// =========================
+
 	leads: Lead[] = [];
 
 	searchText = "";
@@ -90,7 +94,7 @@ export class FacebookLeadsComponent implements OnInit {
 	// =========================
 
 	ngOnInit(): void {
-		// Read the pageId from the URL (e.g. /facebook-pages/12345/leads)
+		// Read pageId from URL
 		this.pageId = this.route.snapshot.paramMap.get("pageId") || "";
 
 		if (this.pageId) {
@@ -169,21 +173,38 @@ export class FacebookLeadsComponent implements OnInit {
 		});
 	}
 
+	// =========================
+	// SYNC FORM LEADS
+	// =========================
+
 	syncFormLeads(formId: string): void {
 		this.isLoadingForms = true;
 
 		this.syncMessage = "Syncing leads from Meta...";
 
-		// 🛑 VERIFY THIS LINE: Are both pageId and formId being passed?
+		console.log(
+			"SENDING TO BACKEND -> Page ID:",
+			this.pageId,
+			"| Form ID:",
+			formId,
+		);
+
 		this.metaAuthService.syncLeads(this.pageId, formId).subscribe({
-			next: (res) => {
+			next: (res: any) => {
 				this.syncMessage = `Success! Synced ${res.totalFormMeta} leads.`;
+
 				this.isLoadingForms = false;
+
 				this.loadLeads();
 			},
+
 			error: (err) => {
 				console.error("Error syncing leads:", err);
-				this.syncMessage = `Error: ${err.error?.message || "Failed to sync leads."}`;
+
+				this.syncMessage = `Error: ${
+					err.error?.message || "Failed to sync leads."
+				}`;
+
 				this.isLoadingForms = false;
 			},
 		});
@@ -196,7 +217,6 @@ export class FacebookLeadsComponent implements OnInit {
 	loadLeads(): void {
 		this.loading = true;
 
-		// ✅ FIX: Pass the pageId to the service
 		this.leadService.getLeads(this.pageId).subscribe({
 			next: (response) => {
 				if (response.success) {
@@ -204,11 +224,15 @@ export class FacebookLeadsComponent implements OnInit {
 				} else {
 					this.leads = [];
 				}
+
 				this.loading = false;
 			},
+
 			error: (error: any) => {
 				console.error("Error loading leads:", error);
+
 				this.leads = [];
+
 				this.loading = false;
 			},
 		});
@@ -265,58 +289,89 @@ export class FacebookLeadsComponent implements OnInit {
 		lead.pendingStatus = newStatus;
 	}
 
-	// Inside facebook-leads.component.ts
-	confirmStatusChange(lead: any) {
-		if (!lead.pendingStatus) return;
+	// =========================
+	// CONFIRM STATUS CHANGE
+	// =========================
 
-		let dealValue: number | undefined = undefined;
-		let currency: string | undefined = undefined;
-
-		// 1. Intercept if it's a Purchase
-		if (lead.pendingStatus === "CLOSED_WON") {
-			const input = prompt(
-				"🎉 Deal closed! Please enter the final sale amount:",
-			);
-
-			if (input === null) {
-				this.cancelStatusChange(lead);
-				return;
-			}
-
-			dealValue = parseFloat(input);
-			if (isNaN(dealValue) || dealValue <= 0) {
-				alert("Invalid amount. Please try again with a valid number.");
-				this.cancelStatusChange(lead);
-				return;
-			}
-
-			currency = "INR"; // Set your default currency here
+	confirmStatusChange(lead: Lead): void {
+		if (!lead.pendingStatus) {
+			return;
 		}
 
-		// 2. Call your updated service with the specific parameters
+		// ==========================================
+		// CLOSED WON → OPEN DEAL AMOUNT DIALOG
+		// ==========================================
+
+		if ((lead.pendingStatus as string) === "CLOSED_WON") {
+			const dialogRef = this.dialog.open(DealAmountDialogComponent, {
+				width: "400px",
+				disableClose: true,
+				autoFocus: true,
+			});
+
+			dialogRef.afterClosed().subscribe((amount: number | null) => {
+				// User cancelled
+				if (amount === null || amount === undefined) {
+					this.cancelStatusChange(lead);
+					return;
+				}
+
+				// Validate amount
+				if (isNaN(amount) || amount <= 0) {
+					this.snackBar.open("Please enter a valid sale amount", "", {
+						duration: 2000,
+						horizontalPosition: "center",
+						verticalPosition: "top",
+					});
+
+					this.cancelStatusChange(lead);
+					return;
+				}
+
+				// Update CLOSED WON
+				this.updateLeadStatus(lead, amount, "INR");
+			});
+
+			return;
+		}
+
+		// ==========================================
+		// ALL OTHER STATUS CHANGES
+		// ==========================================
+
+		this.updateLeadStatus(lead);
+	}
+
+	// =========================
+	// UPDATE LEAD STATUS
+	// =========================
+
+	updateLeadStatus(lead: Lead, dealValue?: number, currency?: string): void {
+		const newStatus = lead.pendingStatus;
+
+		if (!newStatus) {
+			return;
+		}
+
 		this.leadService
-			.updateLeadStatus(
-				lead._id || lead.id,
-				lead.pendingStatus,
-				dealValue,
-				currency,
-			)
+			.updateLeadStatus(lead._id, newStatus, dealValue, currency)
 			.subscribe({
 				next: () => {
-					// Save new status
-					lead.status = lead.pendingStatus;
+					// Update status
+					lead.status = newStatus;
 
-					// Save deal information if available
+					// Save purchase information
 					if (dealValue !== undefined) {
-						lead.dealValue = dealValue;
-						lead.currency = currency;
+						(lead as any).dealValue = dealValue;
+
+						(lead as any).currency = currency;
 					}
 
 					// Clear pending status
-					lead.pendingStatus = null;
+					delete lead.pendingStatus;
 
 					// ==========================================
-					// SUCCESS MESSAGE
+					// SUCCESS POPUP
 					// ==========================================
 
 					this.snackBar.open("✓ Status changed successfully", "", {
