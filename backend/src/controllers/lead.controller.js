@@ -1,4 +1,5 @@
 const leadService = require("../services/lead.service");
+const {sendConversionEvent}=require('.././services/capi.service')
 
 const getLeads = async (req, res, next) => {
 	try {
@@ -51,21 +52,35 @@ const createLead = async (req, res, next) => {
 const updateLeadStatus = async (req, res, next) => {
 	try {
 		if (!req.body.status) {
-			res.status(400).json({
+			return res.status(400).json({ // ✅ ADD RETURN
 				success: false,
 				message: "Status is required",
 			});
 		}
+        
+        // 1. Wait for your Database to update the status[cite: 5, 6]
 		const updateLead = await leadService.updateLeadStatus(
 			req.params.id,
 			req.body.status,
 		);
+
 		if (!updateLead) {
-			res.status(404).json({
+			return res.status(404).json({ // ✅ ADD RETURN
 				success: false,
 				message: "Lead not Found",
 			});
 		}
+
+        // 2. 🚀 FIRE CONVERSIONS API IN THE BACKGROUND
+        if (updateLead.metaLeadId) {
+            sendConversionEvent(
+                req.user.accessToken, 
+                updateLead.metaLeadId, 
+                updateLead.status,
+				updateLead.email, // 👈 Pass the email
+                updateLead.phone
+            );
+        }
 
 		res.status(200).json({
 			success: true,

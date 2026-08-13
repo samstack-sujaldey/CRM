@@ -8,11 +8,12 @@ const updateLeadStatus = async (leadId, status) => {
 	const allowedStatus = [
 		"NEW",
 		"CONTACTED",
-		"INTERESTED",
+		"QUALIFIED",
 		"SITE_VISIT_SCHEDULED",
 		"SITE_VISITED",
-		"BOOKED",
-		"CLOSED",
+		"NEGOTIATION",
+		"CLOSED_WON",
+		"CLOSED_LOST",
 	];
 
 	if (!allowedStatus.includes(status)) {

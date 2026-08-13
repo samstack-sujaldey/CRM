@@ -106,13 +106,14 @@
       <mat-label>Status</mat-label>
       <mat-select [(ngModel)]="selectedStatus">
         <mat-option value="ALL">All Status</mat-option>
-        <mat-option value="NEW">New</mat-option>
+      <mat-option value="NEW">New</mat-option>
         <mat-option value="CONTACTED">Contacted</mat-option>
-        <mat-option value="INTERESTED">Qualified</mat-option>
+        <mat-option value="QUALIFIED">Qualified</mat-option>
         <mat-option value="SITE_VISIT_SCHEDULED">Site Visit Scheduled</mat-option>
         <mat-option value="SITE_VISITED">Site Visit Completed</mat-option>
-        <mat-option value="BOOKED">Booking</mat-option>
-        <mat-option value="CLOSED">Purchase</mat-option>
+        <mat-option value="NEGOTIATION">Negotiation / Booking</mat-option>
+        <mat-option value="CLOSED_WON">Closed Won (Purchase)</mat-option>
+        <mat-option value="CLOSED_LOST">Closed Lost (Junk)</mat-option>
       </mat-select>
     </mat-form-field>
   </mat-card>
@@ -160,11 +161,12 @@
                 <mat-select [value]="lead.pendingStatus || lead.status" (selectionChange)="selectStatus(lead, $event.value)">
                   <mat-option value="NEW">New</mat-option>
                   <mat-option value="CONTACTED">Contacted</mat-option>
-                  <mat-option value="INTERESTED">Qualified</mat-option>
+                  <mat-option value="QUALIFIED">Qualified</mat-option>
                   <mat-option value="SITE_VISIT_SCHEDULED">Site Visit Scheduled</mat-option>
                   <mat-option value="SITE_VISITED">Site Visit Completed</mat-option>
-                  <mat-option value="BOOKED">Booking</mat-option>
-                  <mat-option value="CLOSED">Purchase</mat-option>
+                  <mat-option value="NEGOTIATION">Negotiation / Booking</mat-option>
+                  <mat-option value="CLOSED_WON">Closed Won (Purchase)</mat-option>
+                  <mat-option value="CLOSED_LOST">Closed Lost (Junk)</mat-option>
                 </mat-select>
               </mat-form-field>
 
