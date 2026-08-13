@@ -16,6 +16,11 @@ export class AuthService {
       tap((res: any) => {
         if (res.success && res.token) {
           localStorage.setItem('app_auth_token', res.token);
+          
+          // 🛑 ADDED: Save the refresh token when they log in!
+          if (res.refreshToken) {
+            localStorage.setItem('app_refresh_token', res.refreshToken); 
+          }
         }
       })
     );
@@ -26,6 +31,26 @@ export class AuthService {
       tap((res: any) => {
         if (res.success && res.token) {
           localStorage.setItem('app_auth_token', res.token);
+          
+          // 🛑 ADDED: Save the refresh token when they register!
+          if (res.refreshToken) {
+            localStorage.setItem('app_refresh_token', res.refreshToken); 
+          }
+        }
+      })
+    );
+  }
+
+  // 🚀 NEW: This is the method that actually asks the backend for a NEW access token!
+  refreshToken(): Observable<any> {
+    const refreshToken = localStorage.getItem('app_refresh_token');
+    
+    // It sends the long-lived refresh token to your Node.js /refresh route
+    return this.http.post(`${this.baseUrl}/refresh`, { token: refreshToken }).pipe(
+      tap((res: any) => {
+        if (res.success && res.accessToken) {
+          // It then overwrites the old, expired access token with the brand new one!
+          localStorage.setItem('app_auth_token', res.accessToken);
         }
       })
     );
@@ -33,6 +58,8 @@ export class AuthService {
 
   logout(): void {
     localStorage.removeItem('app_auth_token');
+    // 🛑 ADDED: Make sure to delete the refresh token on logout too
+    localStorage.removeItem('app_refresh_token');
   }
 
   getToken(): string | null {
