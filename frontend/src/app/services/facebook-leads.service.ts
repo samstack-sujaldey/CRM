@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 export interface Lead {
   _id: string;
@@ -19,13 +20,11 @@ export interface Lead {
 
 export type LeadStatus = 'NEW' | 'CONTACTED' | 'INTERESTED' | 'SITE_VISIT_SCHEDULED' | 'SITE_VISITED' | 'BOOKED' | 'CLOSED';
 
-const API_BASE_URL = 'http://localhost:5000/api';
-
 @Injectable({
   providedIn: 'root'
 })
 export class FacebookLeadsService {
-  private readonly baseUrl = `${API_BASE_URL}`;
+  private readonly baseUrl = environment.apiUrl;
 
   constructor(private http: HttpClient) {}
 

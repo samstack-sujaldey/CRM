@@ -1,8 +1,7 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs'; // <-- Added 'of' here
-
-const API_BASE_URL = 'http://localhost:5000/api';
+import { Observable, of } from 'rxjs'; 
+import { environment } from '../../environments/environment'
 
 export interface MetaStartAuthResponse {
   success: boolean;
@@ -24,7 +23,7 @@ export interface MetaStatusResponse {
 })
 export class MetaAuthService {
 
-  private readonly baseUrl = `${API_BASE_URL}/meta`; // Ensure this matches your Node routes!
+  private readonly baseUrl = `${environment.apiUrl}/meta`; // Ensure this matches your Node routes!
 
   constructor(private http: HttpClient) {}
 
