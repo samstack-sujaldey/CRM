@@ -31,7 +31,6 @@ function getEventNameForStatus(status) {
 		INTERESTED: "Lead",
 		SITE_VISIT_SCHEDULED: "Schedule",
 		SITE_VISITED: "SiteVisit",
-		BOOKED: "Purchase",
 		CLOSED: "Closed",
 	};
 
@@ -41,7 +40,7 @@ function getEventNameForStatus(status) {
 /**
  * Send a real conversion event to Meta CAPI.
  */
-async function sendConversionEvent({ lead, eventName, eventId }) {
+async function sendConversionEvent({ lead, eventName, custom_data, eventId }) {
 	if (!META_DATASET_ID) {
 		throw new Error("META_DATASET_ID is missing");
 	}
@@ -76,11 +75,8 @@ async function sendConversionEvent({ lead, eventName, eventId }) {
 		user_data: userData,
 	};
 
-	if (eventName === "Purchase") {
-		event.custom_data = {
-			currency: "INR",
-			value: 0,
-		};
+	if (custom_data) {
+		event.custom_data = custom_data;
 	}
 
 	const payload = {

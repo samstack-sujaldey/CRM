@@ -68,9 +68,49 @@ const updateLeadStatus = async (req, res, next) => {
 	}
 };
 
+const updateBooking = async (req, res, next) => {
+	try {
+		const { id } = req.params;
+		const { bookingAmount, currency = "INR" } = req.body;
+
+		if (bookingAmount === undefined) {
+			return res.status(400).json({
+				success: false,
+				message: "bookingAmount is required",
+			});
+		}
+
+		const result = await leadService.updateBooking(
+			id,
+			Number(bookingAmount),
+			currency.toUpperCase(),
+		);
+
+		const conversionFailed = result.conversion.status === "FAILED";
+
+		return res.status(conversionFailed ? 207 : 200).json({
+			success: !conversionFailed,
+			message: conversionFailed
+				? "Booking saved, but Meta conversion event failed"
+				: "Booking updated and conversion event sent successfully",
+			data: result.lead,
+			conversion: {
+				status: result.conversion.status,
+				eventName: result.conversion.eventName,
+				eventId: result.conversion.eventId,
+				attempts: result.conversion.attempts,
+				error: result.conversion.error || null,
+			},
+		});
+	} catch (error) {
+		next(error);
+	}
+};
+
 module.exports = {
 	getLeads,
 	getLead,
 	createLead,
 	updateLeadStatus,
+	updateBooking,
 };
