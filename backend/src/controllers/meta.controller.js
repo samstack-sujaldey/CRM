@@ -13,7 +13,7 @@ const ApiVersion = process.env.META_API_VERSION;
 // 1. Start Meta OAuth (Remains exactly the same)
 const startMetaAuth = async (req, res) => {
 	try {
-		const state = uuidv4();
+		const state = crypto.randomBytes(16).toString("hex");
 		const authUrl = axios.getUri({
 			url: `https://www.facebook.com/${ApiVersion}/dialog/oauth`,
 			params: {

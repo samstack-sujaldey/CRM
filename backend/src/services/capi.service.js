@@ -15,7 +15,7 @@ axiosRetry(capiClient, {
 // Helper function to format and hash data for Meta
 const hashData = (data) => {
   if (!data) return undefined;
-  return SHA256(data.trim().toLowerCase()).toString();
+  return  crypto.createHash("sha256").update(data.trim().toLowerCase()).digest("hex");
 };
 
 const sendConversionEvent = async (accessToken, metaLeadId, newStatus,email,phone,dealValue,currency) => {
