@@ -6,26 +6,32 @@ const leadSchema = new mongoose.Schema(
 			type: String,
 			required: true,
 			trim: true,
+			maxlength: 150,
 		},
 		email: {
 			type: String,
 			required: true,
 			trim: true,
+			lowercase: true,
+			maxlength: 254,
 		},
 		phone: {
 			type: String,
 			trim: true,
 			default: "",
+			maxlength: 30,
 		},
 		property: {
 			type: String,
 			default: "",
 			trim: true,
+			maxlength: 200,
 		},
 		source: {
 			type: String,
 			enum: ["META", "MANUAL", "OTHER"],
 			default: "META",
+			index: true,
 		},
 		status: {
 			type: String,
@@ -39,6 +45,7 @@ const leadSchema = new mongoose.Schema(
 				"CLOSED",
 			],
 			default: "NEW",
+			index: true,
 		},
 		metaLeadId: {
 			type: String,
@@ -60,14 +67,31 @@ const leadSchema = new mongoose.Schema(
 			default: "",
 			trim: true,
 		},
-		notes: {
+		bookingAmount: {
+			type: Number,
+			min: 0,
+			default: 0,
+		},
+		currency: {
 			type: String,
+			trim: true,
+			uppercase: true,
+			match: /^[A-Z]{3}$/,
+			default: "INR",
 		},
 		siteVisitDate: {
 			type: Date,
 		},
 	},
 	{ timestamps: true },
+);
+
+leadSchema.index(
+	{ metaLeadId: 1 },
+	{
+		unique: true,
+		sparse: true,
+	},
 );
 
 module.exports = mongoose.model("Lead", leadSchema);

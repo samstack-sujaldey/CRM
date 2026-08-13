@@ -4,6 +4,7 @@ const router = express.Router();
 
 const metaController = require("../controllers/meta.controller");
 const authMiddleware = require("../middleware/auth.middleware");
+const { sendLeadEvent } = require("../services/capi.service");
 
 // 1. Start OAuth (No authMiddleware because they are logging in!)
 router.get("/", metaController.startMetaAuth);
@@ -23,4 +24,3 @@ router.post(
 router.patch("/sync", authMiddleware, metaController.syncLeads);
 
 module.exports = router;
-
