@@ -1,3 +1,7 @@
+if (typeof globalThis.crypto === 'undefined') {
+  globalThis.crypto = require('node:crypto').webcrypto;
+}
+
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");

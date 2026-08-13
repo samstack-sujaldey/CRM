@@ -1,9 +1,9 @@
 const dotenv = require("dotenv");
 dotenv.config();
-const Page = require("../models/page.model"); // Make sure this is imported at the top!
+const Page = require("../models/Page.model"); 
 const crypto = require("crypto");
 const axios = require("axios");
-const jwt = require("jsonwebtoken"); // <-- ADD THIS to sign tokens directly
+const jwt = require("jsonwebtoken"); 
 const MetaConnection = require("../models/meta.model");
 const metaService = require("../services/meta.service");
 const leadService = require("../services/lead.service");
