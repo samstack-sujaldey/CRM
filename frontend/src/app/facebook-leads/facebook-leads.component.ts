@@ -95,6 +95,8 @@ export class FacebookLeadsComponent implements OnInit {
     this.isLoadingForms = true;
     this.syncMessage = "Syncing leads from Meta...";
 
+    console.log("SENDING TO BACKEND -> Page ID:", this.pageId, " | Form ID:", formId);
+
     // 🛑 VERIFY THIS LINE: Are both pageId and formId being passed?
     this.metaAuthService.syncLeads(this.pageId, formId).subscribe({
       next: (res) => {

@@ -5,7 +5,7 @@ const pageSchema = new mongoose.Schema(
     // NEW: Strict relational reference to your User/MetaConnection model
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "MetaConnection", // Ensure this matches your exact model name!
+      ref: "Meta", // Ensure this matches your exact model name!
       required: true,
       index: true,
     },

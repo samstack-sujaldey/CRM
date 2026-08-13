@@ -46,7 +46,7 @@
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef> Action </th>
           <td mat-cell *matCellDef="let form">
-            <button mat-raised-button color="primary" (click)="syncFormLeads(form.id)" [disabled]="isLoadingForms">
+            <button mat-raised-button color="primary" (click)="syncFormLeads(form.formId || form.id)" [disabled]="isLoadingForms">
               <mat-icon>sync</mat-icon> Sync Leads
             </button>
           </td>
