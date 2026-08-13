@@ -1,5 +1,15 @@
 const axios = require("axios");
+const axiosRetry=require('axios-retry').default
 const crypto = require("crypto"); // 👈 ADD THIS
+
+axiosRetry(axios, {
+  retries: 3, // Number of times to retry
+  retryDelay: axiosRetry.exponentialDelay, // Waits 1s, then 2s, then 4s
+  retryCondition: (error) => {
+    // Retry on network errors or 5xx server errors from Meta
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status >= 500;
+  }
+});
 
 // Helper function to format and hash data for Meta
 const hashData = (data) => {
@@ -7,7 +17,7 @@ const hashData = (data) => {
   return crypto.createHash("sha256").update(data.trim().toLowerCase()).digest("hex");
 };
 
-const sendConversionEvent = async (accessToken, metaLeadId, newStatus,email,phone) => {
+const sendConversionEvent = async (accessToken, metaLeadId, newStatus,email,phone,dealValue,currency) => {
   try {
     const pixelId = process.env.META_PIXEL_ID;
     const capiToken = process.env.META_CAPI_TOKEN;
@@ -24,16 +34,23 @@ const sendConversionEvent = async (accessToken, metaLeadId, newStatus,email,phon
     }
 
     // 🎯 Map Real Estate CRM Statuses to Meta Standard Events
-    let eventName = "Lead"; // Default fallback
-    
+    let eventName = "Lead"; 
     if (newStatus === "CONTACTED") eventName = "Contact";
     if (newStatus === "SITE_VISIT_SCHEDULED") eventName = "Schedule";
     if (newStatus === "SITE_VISITED") eventName = "FindLocation";
     if (newStatus === "NEGOTIATION") eventName = "SubmitApplication";
-    
-    // A Closed Won property is the ultimate conversion value
     if (newStatus === "CLOSED_WON") eventName = "Purchase"; 
 
+    // 1. Create the base custom_data object
+    const customData = {
+      crm_status: newStatus 
+    };
+
+    // 2. 🛑 Inject the required parameters if it's a Purchase
+    if (eventName === "Purchase") {
+      customData.currency = currency || "INR"; 
+      customData.value = Number(dealValue) || 1;
+    }
     const payload = {
       data: [
         {
@@ -45,9 +62,7 @@ const sendConversionEvent = async (accessToken, metaLeadId, newStatus,email,phon
             em: hashData(email), // 👈 Send hashed email
             ph: hashData(phone)
           },
-          custom_data: {
-            crm_status: newStatus 
-          }
+          custom_data: customData
         }
       ] 
     };

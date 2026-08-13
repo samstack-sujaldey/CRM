@@ -43,8 +43,20 @@ export class FacebookLeadsService {
     });
   }
 
-  updateLeadStatus(leadId: string, status: LeadStatus): Observable<any> {
-    return this.http.patch(`${this.baseUrl}/leads/${leadId}/status`, { status }, {
+ updateLeadStatus(
+    leadId: string, 
+    status: LeadStatus, 
+    dealValue?: number, 
+    currency?: string
+  ): Observable<any> {
+    
+    // 1. Build the payload dynamically
+    const payload: any = { status };
+    if (dealValue !== undefined) payload.dealValue = dealValue;
+    if (currency !== undefined) payload.currency = currency;
+
+    // 2. Send it using your existing URL and headers
+    return this.http.patch(`${this.baseUrl}/leads/${leadId}/status`, payload, {
       headers: this.getAuthHeaders()
     });
   }

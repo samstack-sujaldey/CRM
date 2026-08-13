@@ -16,6 +16,11 @@ const leadSchema = new mongoose.Schema(
 			type: String,
 			required: true,
 		},
+    metaLeadId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
 		name: {
 			type: String,
 			required: true,
@@ -55,10 +60,13 @@ const leadSchema = new mongoose.Schema(
       ],
       default: "NEW",
     },
-    metaLeadId: {
+    dealValue: {
+      type: Number,
+      default: null,
+    },
+    currency: {
       type: String,
-      unique: true,
-      sparse: true,
+      default: "INR", // Or "USD", depending on your default
     },
     notes: {
       type: String,

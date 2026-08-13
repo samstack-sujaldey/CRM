@@ -49,38 +49,46 @@ const createLead = async (req, res, next) => {
 	}
 };
 
+// Inside lead.controller.js
+
 const updateLeadStatus = async (req, res, next) => {
 	try {
-		if (!req.body.status) {
-			return res.status(400).json({ // ✅ ADD RETURN
+		const { status, dealValue, currency } = req.body;
+
+		if (!status) {
+			return res.status(400).json({
 				success: false,
 				message: "Status is required",
 			});
 		}
-        
-        // 1. Wait for your Database to update the status[cite: 5, 6]
+
+		// 1. Update status in MongoDB (Optionally update dealValue in DB if your Schema supports it)
 		const updateLead = await leadService.updateLeadStatus(
 			req.params.id,
-			req.body.status,
+			status,
+			dealValue, // 👈 Add this line to pass it to the DB
+            currency
 		);
 
 		if (!updateLead) {
-			return res.status(404).json({ // ✅ ADD RETURN
+			return res.status(404).json({
 				success: false,
 				message: "Lead not Found",
 			});
 		}
 
-        // 2. 🚀 FIRE CONVERSIONS API IN THE BACKGROUND
-        if (updateLead.metaLeadId) {
-            sendConversionEvent(
-                req.user.accessToken, 
-                updateLead.metaLeadId, 
-                updateLead.status,
-				updateLead.email, // 👈 Pass the email
-                updateLead.phone
-            );
-        }
+		// 2. 🚀 Pass the dealValue and currency to Meta Conversions API
+		if (updateLead.metaLeadId) {
+			sendConversionEvent(
+				req.user.accessToken,
+				updateLead.metaLeadId,
+				updateLead.status,
+				updateLead.email,
+				updateLead.phone,
+				updateLead.dealValue, // 👈 Pass dealValue
+				updateLead.currency   // 👈 Pass currency
+			);
+		}
 
 		res.status(200).json({
 			success: true,

@@ -91,6 +91,8 @@ export class FacebookLeadsComponent implements OnInit {
     });
   }
 
+  
+
  syncFormLeads(formId: string): void {
     this.isLoadingForms = true;
     this.syncMessage = "Syncing leads from Meta...";
@@ -169,20 +171,52 @@ export class FacebookLeadsComponent implements OnInit {
     lead.pendingStatus = newStatus;
   }
 
-  confirmStatusChange(lead: Lead): void {
-    if (!lead.pendingStatus || lead.pendingStatus === lead.status) return;
+ // Inside facebook-leads.component.ts
+ confirmStatusChange(lead: any) {
+    if (!lead.pendingStatus) return;
 
-    const newStatus = lead.pendingStatus;
-    this.leadService.updateLeadStatus(lead._id, newStatus).subscribe({
+    let dealValue: number | undefined = undefined;
+    let currency: string | undefined = undefined;
+
+    // 1. Intercept if it's a Purchase
+    if (lead.pendingStatus === 'CLOSED_WON') {
+      const input = prompt('🎉 Deal closed! Please enter the final sale amount:');
+      
+      if (input === null) {
+        this.cancelStatusChange(lead);
+        return; 
+      }
+
+      dealValue = parseFloat(input);
+      if (isNaN(dealValue) || dealValue <= 0) {
+        alert('Invalid amount. Please try again with a valid number.');
+        this.cancelStatusChange(lead);
+        return;
+      }
+      
+      currency = 'INR'; // Set your default currency here
+    }
+
+    // 2. Call your updated service with the specific parameters
+    this.leadService.updateLeadStatus(
+      lead._id || lead.id, 
+      lead.pendingStatus, 
+      dealValue, 
+      currency
+    ).subscribe({
       next: (response) => {
-        if (response.success) {
-          lead.status = newStatus;
-          delete lead.pendingStatus;
+        // Success! Update UI
+        lead.status = lead.pendingStatus;
+        if (dealValue) {
+          lead.dealValue = dealValue;
+          lead.currency = currency;
         }
+        lead.pendingStatus = null;
       },
-      error: (error: any) => {
-        console.error('Error updating status:', error);
-        delete lead.pendingStatus;
+      error: (err) => {
+        console.error('Failed to update lead:', err);
+        alert('Failed to update lead status. Please try again.');
+        this.cancelStatusChange(lead);
       }
     });
   }

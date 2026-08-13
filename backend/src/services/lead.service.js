@@ -4,7 +4,7 @@ const createLead = async (data) => {
 	return await Lead.create(data);
 };
 
-const updateLeadStatus = async (leadId, status) => {
+const updateLeadStatus = async (leadId, status,dealValue,currency) => {
 	const allowedStatus = [
 		"NEW",
 		"CONTACTED",
@@ -21,10 +21,22 @@ const updateLeadStatus = async (leadId, status) => {
 		error.statusCode = 400;
 		throw error;
 	}
+	const updateData = { status: status };
+    
+    // 2. 🎯 Enforce the Revenue Rule
+    if (status === "CLOSED_WON") {
+        // Only save the deal value if the deal is actually won
+        if (dealValue !== undefined) updateData.dealValue = dealValue;
+        if (currency !== undefined) updateData.currency = currency;
+    } else {
+        // If the status is ANYTHING else, wipe the revenue value
+        updateData.dealValue = null; 
+    }
+    // Save it to MongoDB
 	const lead = await Lead.findByIdAndUpdate(
 		leadId,
-		{ status: status },
-		{ new: true, runValidators: true },
+		updateData, // 👈 Pass the updateData object here instead of just { status }
+		{ returnDocument: 'after', runValidators: true }
 	);
 
 	if (!lead) {
