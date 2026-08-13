@@ -66,53 +66,77 @@ const getAllLeads = async (pageId) => {
 
 	// 4. Fetch leads for every form
 	const formsWithLeads = await Promise.all(
-    forms.map(async (form) => {
-        try {
-            const leadsResponse = await metaService.getFormLeads(
-                form.id,
-                pageAccessToken
-            );
+		forms.map(async (form) => {
+			try {
+				const leadsResponse = await metaService.getFormLeads(
+					form.id,
+					pageAccessToken
+				);
 
-            const leads = (leadsResponse.data || []).map((lead) => {
-                const fieldData = {};
+				const leads = await Promise.all(
+					(leadsResponse.data || []).map(async (metaLead) => {
 
-                (lead.field_data || []).forEach((field) => {
-                    fieldData[field.name] = field.values?.[0] || "";
-                });
+						const fieldData = {};
 
-                return {
-                    leadId: lead.id,
-                    createdTime: lead.created_time,
+						(metaLead.field_data || []).forEach((field) => {
+							fieldData[field.name] = field.values?.[0] || "";
+						});
 
-                    name: fieldData.full_name || "",
-                    email: fieldData.email || "",
-                    phone: fieldData.phone_number || "",
+						// Find existing MongoDB lead
+						let existingLead = await Lead.findOne({
+							metaLeadId: metaLead.id,
+						});
 
-                    // Keep all other custom form fields too
-                    fields: fieldData,
-                };
-            });
+						// If this Meta lead does not exist in MongoDB,
+						// create it so we can store its CRM status.
+						if (!existingLead) {
+							existingLead = await Lead.create({
+								name: fieldData.full_name || "Unknown",
+								email: fieldData.email || "",
+								phone: fieldData.phone_number || "",
+								source: "META",
+								metaLeadId: metaLead.id,
+								status: "NEW",
+							});
+						}
 
-            return {
-                formId: form.id,
-                formName: form.name || "Unnamed Form",
-                leads,
-            };
-        } catch (error) {
-            console.error(
-                `Failed to fetch leads for form ${form.id}:`,
-                error.message
-            );
+						return {
+							leadId: metaLead.id,
+							mongoLeadId: existingLead._id,
 
-            return {
-                formId: form.id,
-                formName: form.name || "Unnamed Form",
-                leads: [],
-                error: "Failed to fetch leads for this form",
-            };
-        }
-    })
-);
+							createdTime: metaLead.created_time,
+
+							name: fieldData.full_name || "",
+							email: fieldData.email || "",
+							phone: fieldData.phone_number || "",
+
+							status: existingLead.status,
+
+							fields: fieldData,
+						};
+					})
+				);
+
+				return {
+					formId: form.id,
+					formName: form.name || "Unnamed Form",
+					leads,
+				};
+			} catch (error) {
+				console.error(
+					`Failed to fetch leads for form ${form.id}:`,
+					error.message
+				);
+
+				return {
+					formId: form.id,
+					formName: form.name || "Unnamed Form",
+					leads: [],
+					error: "Failed to fetch leads for this form",
+				};
+			}
+		})
+	);
 
 	// 5. Return page + forms + leads
 	return {

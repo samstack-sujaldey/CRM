@@ -20,6 +20,9 @@ export interface Lead {
   source?: string;
   status: LeadStatus;
   metaLeadId?: string;
+  mongoLeadId?: string;
+  leadId?: string;
+  createdTime?: string;
   notes?: string;
   siteVisitDate?: string;
   createdAt?: string;

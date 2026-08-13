@@ -44,10 +44,12 @@ export class FacebookLeadsComponent implements OnInit {
 
   // Search
   searchText = '';
+  searchTerm = '';
 
   // Status filter
-  selectedStatus: LeadStatus | 'ALL' = 'ALL';
+  selectedStatus = 'ALL';
 
+  filteredForms: any[] = [];
   // Table columns
   displayedColumns: string[] = [
     'lead',
@@ -73,38 +75,38 @@ export class FacebookLeadsComponent implements OnInit {
   selectedPageId: string = '';
   selectedFormId: string = '';
   pageLeadsData: any = null;
-loadingPageLeads = false;
+  loadingPageLeads = false;
   syncMessage: string = '';
 
   constructor(
     private leadService: FacebookLeadsService,
     private metaAuthService: MetaAuthService,
-    private route: ActivatedRoute, 
+    private route: ActivatedRoute,
     private router: Router
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // Check the URL for a token returning from the Facebook OAuth callback
     this.route.queryParams.subscribe(params => {
       const token = params['token'];
-      
+
       if (token) {
         // 1. Save the token to log the user in locally
         localStorage.setItem('app_auth_token', token);
-        
+
         // 2. Remove the token from the browser's address bar for security
         this.router.navigate([], { replaceUrl: true });
-        
+
         // 3. Update state
         this.metaConnected = true;
         this.metaStatusLoading = false;
-        
+
         // 4. Now that we are authenticated, fetch the leads and pages
         this.loadPages();
       } else {
         // Normal page load (they are already logged in or need to log in)
         this.checkMetaStatus();
-        
+
         // Only load leads if they actually have a token saved
         if (localStorage.getItem('app_auth_token')) {
           this.loadPages();
@@ -138,22 +140,43 @@ loadingPageLeads = false;
   }
 
   showPageLeads(page: any): void {
+
   this.selectedPageId = page.pageId;
+
   this.loadingPageLeads = true;
   this.pageLeadsData = null;
 
-  this.leadService.getLeads(this.selectedPageId).subscribe({
+  // Reset filters when changing page
+  this.searchTerm = '';
+  this.selectedStatus = 'ALL';
+
+  this.leadService.getLeads(page.pageId).subscribe({
+
     next: (response) => {
+
       if (response.success) {
+
         this.pageLeadsData = response.data;
+
+        this.applyFilters();
       }
 
       this.loadingPageLeads = false;
     },
+
     error: (error) => {
-      console.error('Error loading page leads:', error);
+
+      console.error(
+        'Error loading page leads:',
+        error
+      );
+
+      this.pageLeadsData = null;
+      this.filteredForms = [];
+
       this.loadingPageLeads = false;
     }
+
   });
 }
 
@@ -198,15 +221,15 @@ loadingPageLeads = false;
 
   onPageSelect(event: any): void {
     this.selectedPageId = event.target?.value || event;
-    this.forms = []; 
+    this.forms = [];
     this.selectedFormId = '';
     this.syncMessage = '';
-    
+
     if (this.selectedPageId) {
       this.metaAuthService.getPageForms(this.selectedPageId).subscribe({
         next: (res) => {
           // Meta graphs typically nest form array inside data.data
-          this.forms = res.data?.data || res.data || []; 
+          this.forms = res.data?.data || res.data || [];
         },
         error: (err) => {
           console.error("Error loading lead forms:", err);
@@ -224,94 +247,137 @@ loadingPageLeads = false;
   // GET LEADS
   // =========================
 
-loadLeads(): void {
-  if (!this.selectedPageId) {
-    this.leads = [];
-    return;
-  }
-
-  this.loading = true;
-
-  this.leadService.getLeads(this.selectedPageId).subscribe({
-    next: (response) => {
-      if (response.success) {
-        this.pageLeadsData = response.data;
-      } else {
-        this.pageLeadsData = null;
-      }
-
-      this.loading = false;
-    },
-
-    error: (error: any) => {
-      console.error('Error loading page leads:', error);
-      this.pageLeadsData = null;
-      this.loading = false;
+  loadLeads(): void {
+    if (!this.selectedPageId) {
+      this.leads = [];
+      return;
     }
-  });
-}
+
+    this.loading = true;
+
+    this.leadService.getLeads(this.selectedPageId).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.pageLeadsData = response.data;
+        } else {
+          this.pageLeadsData = null;
+        }
+
+        this.loading = false;
+      },
+
+      error: (error: any) => {
+        console.error('Error loading page leads:', error);
+        this.pageLeadsData = null;
+        this.loading = false;
+      }
+    });
+  }
   // =========================
   // FILTERED LEADS
   // =========================
 
-  get filteredLeads(): Lead[] {
-    const search = this.searchText
-      .toLowerCase()
-      .trim();
-
-    return this.leads.filter((lead: Lead) => {
-      const matchesSearch =
-        !search ||
-        (lead.name || '')
-          .toLowerCase()
-          .includes(search) ||
-        (lead.email || '')
-          .toLowerCase()
-          .includes(search) ||
-        (lead.phone || '')
-          .toLowerCase()
-          .includes(search) ||
-        (lead.property || '')
-          .toLowerCase()
-          .includes(search) ||
-        (lead.source || '')
-          .toLowerCase()
-          .includes(search);
-
-      const matchesStatus =
-        this.selectedStatus === 'ALL' ||
-        lead.status === this.selectedStatus;
-
-      return matchesSearch && matchesStatus;
-    });
+ applyFilters(): void {
+  if (!this.pageLeadsData) {
+    this.filteredForms = [];
+    return;
   }
+
+  const search = this.searchTerm.trim().toLowerCase();
+
+  this.filteredForms = this.pageLeadsData.forms
+    .map((form: any) => {
+
+      const filteredLeads = form.leads.filter((lead: any) => {
+
+        // Search filter
+        const matchesSearch =
+          !search ||
+          (lead.name || '').toLowerCase().includes(search) ||
+          (lead.email || '').toLowerCase().includes(search) ||
+          (lead.phone || '').toLowerCase().includes(search) ||
+          (lead.leadId || '').toLowerCase().includes(search);
+
+        // Status filter
+        const matchesStatus =
+          this.selectedStatus === 'ALL' ||
+          lead.status === this.selectedStatus;
+
+        return matchesSearch && matchesStatus;
+      });
+
+      return {
+        ...form,
+        leads: filteredLeads
+      };
+    })
+    .filter((form: any) => form.leads.length > 0);
+}
+
 
   // =========================
   // STATISTICS
   // =========================
 
-  get totalLeads(): number {
-    return this.leads.length;
+get totalLeads(): number {
+  if (!this.pageLeadsData?.forms) {
+    return 0;
   }
 
-  get newLeads(): number {
-    return this.leads.filter(
-      lead => lead.status === 'NEW'
-    ).length;
+  return this.pageLeadsData.forms.reduce(
+    (total: number, form: any) =>
+      total + (form.leads?.length || 0),
+    0
+  );
+}
+
+
+get newLeads(): number {
+  if (!this.pageLeadsData?.forms) {
+    return 0;
   }
 
-  get qualifiedLeads(): number {
-    return this.leads.filter(
-      lead => lead.status === 'INTERESTED'
-    ).length;
+  return this.pageLeadsData.forms.reduce(
+    (total: number, form: any) =>
+      total +
+      (form.leads || []).filter(
+        (lead: any) => lead.status === 'NEW'
+      ).length,
+    0
+  );
+}
+
+
+get qualifiedLeads(): number {
+  if (!this.pageLeadsData?.forms) {
+    return 0;
   }
 
-  get bookings(): number {
-    return this.leads.filter(
-      lead => lead.status === 'BOOKED'
-    ).length;
+  return this.pageLeadsData.forms.reduce(
+    (total: number, form: any) =>
+      total +
+      (form.leads || []).filter(
+        (lead: any) => lead.status === 'INTERESTED'
+      ).length,
+    0
+  );
+}
+
+
+get bookings(): number {
+  if (!this.pageLeadsData?.forms) {
+    return 0;
   }
 
+  return this.pageLeadsData.forms.reduce(
+    (total: number, form: any) =>
+      total +
+      (form.leads || []).filter(
+        (lead: any) => lead.status === 'BOOKED'
+      ).length,
+    0
+  );
+}
   // =========================
   // STATUS SELECT
   // =========================
@@ -329,6 +395,7 @@ loadLeads(): void {
   // =========================
 
   confirmStatusChange(lead: Lead): void {
+
     if (
       !lead.pendingStatus ||
       lead.pendingStatus === lead.status
@@ -336,27 +403,47 @@ loadLeads(): void {
       return;
     }
 
+    if (!lead.mongoLeadId) {
+      console.error('MongoDB lead ID not found');
+      delete lead.pendingStatus;
+      return;
+    }
+
     const newStatus = lead.pendingStatus;
 
     this.leadService
       .updateLeadStatus(
-        lead._id,
+        lead.mongoLeadId,
         newStatus
       )
       .subscribe({
+
         next: (response) => {
+
           if (response.success) {
-            // Update actual status
+
+            // Update UI
             lead.status = newStatus;
-            // Remove temporary status
+
+            // Remove temporary value
             delete lead.pendingStatus;
+
           }
+
         },
+
         error: (error: any) => {
-          console.error('Error updating status:', error);
-          // If backend fails, return dropdown to original status
+
+          console.error(
+            'Error updating lead status:',
+            error
+          );
+
+          // Revert dropdown
           delete lead.pendingStatus;
+
         }
+
       });
   }
 

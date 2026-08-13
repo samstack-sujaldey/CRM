@@ -5,7 +5,9 @@
 }
 
 
-/* HEADER */
+/* =========================
+   HEADER
+========================= */
 
 .page-header {
   display: flex;
@@ -26,7 +28,9 @@
 }
 
 
-/* STATISTICS */
+/* =========================
+   STATISTICS
+========================= */
 
 .stats-grid {
   display: grid;
@@ -51,12 +55,14 @@
 }
 
 
-/* FILTERS */
+/* =========================
+   FILTERS
+========================= */
 
 .filter-card {
   display: flex;
   align-items: center;
-  justify-content :center;
+  justify-content: center;
   gap: 20px;
   padding: 20px;
   margin-bottom: 20px;
@@ -64,7 +70,7 @@
 }
 
 .search-field {
-  width:320px;
+  width: 320px;
 }
 
 .status-filter {
@@ -72,7 +78,9 @@
 }
 
 
-/* TABLE */
+/* =========================
+   OLD TABLE
+========================= */
 
 .table-card {
   padding: 0;
@@ -99,7 +107,9 @@ th {
 }
 
 
-/* LEAD */
+/* =========================
+   LEAD
+========================= */
 
 .lead-cell {
   display: flex;
@@ -135,15 +145,63 @@ th {
 }
 
 
-/* STATUS */
+/* =========================
+   STATUS
+========================= */
 
 .status-select {
-  width: 220px;
-  margin-top: 10px;
+  width: 150px;
+  min-width: 150px;
+  max-width: 150px;
+
+  margin: 0;
+  padding: 0;
+
+  flex-shrink: 0;
+}
+
+.status-select .mat-mdc-form-field-subscript-wrapper {
+  display: none;
+}
+
+.status-select .mat-mdc-text-field-wrapper {
+  min-height: 40px;
+}
+
+.status-select .mat-mdc-form-field-flex {
+  height: 40px;
+}
+
+.status-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  width: 100%;
+  min-width: 0;
+}
+
+.status-container button {
+  width: 32px;
+  min-width: 32px;
+  max-width: 32px;
+
+  height: 32px;
+
+  flex-shrink: 0;
+}
+
+.confirm-button,
+.cancel-button {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
 }
 
 
-/* NO DATA */
+/* =========================
+   NO DATA
+========================= */
 
 .no-data td {
   text-align: center;
@@ -151,20 +209,399 @@ th {
   color: #777;
 }
 
-.status-container {
+
+/* =========================
+   FACEBOOK PAGES
+========================= */
+
+.pages-card {
+  margin-top: 24px;
+  padding: 0;
+
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.section-header {
+  padding: 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.section-header h2 {
+  margin: 0;
+
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.section-header p {
+  margin: 6px 0 0;
+
+  color: #6b7280;
+  font-size: 14px;
+}
+
+
+/* =========================
+   PAGE LIST
+========================= */
+
+.pages-list {
+  width: 100%;
+}
+
+.page-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: space-between;
+
+  padding: 20px 24px;
+
+  border-bottom: 1px solid #e5e7eb;
+
+  box-sizing: border-box;
 }
 
-.confirm-button,
-.cancel-button {
-  width: 36px;
-  height: 36px;
+.page-item:last-child {
+  border-bottom: none;
+}
+
+.page-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.page-icon {
+  width: 44px;
+  height: 44px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: #e8f0fe;
+}
+
+.page-icon mat-icon {
+  color: #1877f2;
+}
+
+.page-info h3 {
+  margin: 0 0 4px;
+
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.page-info span {
+  color: #6b7280;
+  font-size: 13px;
 }
 
 
-/* RESPONSIVE */
+/* =========================
+   LOADING
+========================= */
+
+.loading-card {
+  margin-top: 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 10px;
+
+  padding: 30px;
+
+  color: #6b7280;
+}
+
+
+/* =========================
+   PAGE LEADS
+========================= */
+
+.page-leads-card {
+  margin-top: 24px;
+  padding: 0;
+
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.page-leads-header {
+  padding: 24px;
+
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.page-leads-header h2 {
+  margin: 0 0 6px;
+
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.page-leads-header span {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+
+/* =========================
+   FORM
+========================= */
+
+.form-section {
+  padding: 24px;
+
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.form-section:last-child {
+  border-bottom: none;
+}
+
+.form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 18px;
+}
+
+.form-header h3 {
+  margin: 0 0 6px;
+
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.form-header span {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.lead-count {
+  padding: 6px 12px;
+
+  border-radius: 20px;
+
+  background: #eef2ff;
+  color: #4f46e5;
+
+  font-size: 13px !important;
+  font-weight: 500;
+}
+
+
+/* =========================
+   META LEADS TABLE
+========================= */
+
+.lead-table-wrapper {
+  width: 100%;
+
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  box-sizing: border-box;
+}
+
+
+/*
+  IMPORTANT:
+  Fixed table layout prevents columns
+  from resizing when mat-select receives focus.
+*/
+
+.meta-leads-table {
+  width: 100%;
+  min-width: 950px;
+
+  table-layout: fixed;
+
+  border-collapse: collapse;
+}
+
+
+/* TABLE HEADER */
+
+.meta-leads-table th {
+  height: 48px;
+
+  padding: 14px 16px;
+
+  text-align: left;
+
+  background: #f9fafb;
+
+  border-bottom: 1px solid #e5e7eb;
+
+  color: #4b5563;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  box-sizing: border-box;
+}
+
+
+/* TABLE CELLS */
+
+.meta-leads-table td {
+  height: 64px;
+
+  padding: 12px 16px;
+
+  border-bottom: 1px solid #e5e7eb;
+
+  color: #111827;
+
+  font-size: 14px;
+
+  vertical-align: middle;
+
+  box-sizing: border-box;
+}
+
+
+/* LAST ROW */
+
+.meta-leads-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+
+/* HOVER */
+
+.meta-leads-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+
+/* =========================
+   FIXED COLUMN WIDTHS
+========================= */
+
+/* Name */
+
+.meta-leads-table th:nth-child(1),
+.meta-leads-table td:nth-child(1) {
+  width: 22%;
+}
+
+
+/* Email */
+
+.meta-leads-table th:nth-child(2),
+.meta-leads-table td:nth-child(2) {
+  width: 20%;
+}
+
+
+/* Phone */
+
+.meta-leads-table th:nth-child(3),
+.meta-leads-table td:nth-child(3) {
+  width: 12%;
+}
+
+
+/* Date */
+
+.meta-leads-table th:nth-child(4),
+.meta-leads-table td:nth-child(4) {
+  width: 15%;
+}
+
+
+/* Lead ID */
+
+.meta-leads-table th:nth-child(5),
+.meta-leads-table td:nth-child(5) {
+  width: 15%;
+}
+
+
+/* Status */
+
+.meta-leads-table th:nth-child(6),
+.meta-leads-table td:nth-child(6) {
+  width: 16%;
+}
+
+
+/* =========================
+   PREVENT TEXT FROM RESIZING
+========================= */
+
+.meta-leads-table th,
+.meta-leads-table td {
+  overflow: hidden;
+
+  white-space: nowrap;
+
+  text-overflow: ellipsis;
+}
+
+
+/* =========================
+   STATUS COLUMN
+========================= */
+
+.meta-leads-table td:last-child {
+  overflow: visible;
+}
+
+.meta-leads-table td:last-child .status-container {
+  overflow: visible;
+}
+
+
+/* Dropdown stays fixed */
+
+.meta-leads-table .status-select {
+  width: 150px;
+  min-width: 150px;
+  max-width: 150px;
+
+  flex: 0 0 150px;
+}
+
+
+/* Confirm / Cancel buttons */
+
+.meta-leads-table .status-container button {
+  flex: 0 0 32px;
+}
+
+
+/* =========================
+   NO FORM LEADS
+========================= */
+
+.no-form-leads {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  padding: 35px;
+
+  color: #6b7280;
+}
+
+
+/* =========================
+   RESPONSIVE
+========================= */
 
 @media (max-width: 900px) {
 
@@ -184,6 +621,39 @@ th {
 }
 
 
+/* =========================
+   TABLET / MOBILE
+========================= */
+
+@media (max-width: 700px) {
+
+  .page-item {
+    align-items: flex-start;
+
+    gap: 16px;
+
+    flex-direction: column;
+  }
+
+  .form-header {
+    align-items: flex-start;
+
+    gap: 12px;
+
+    flex-direction: column;
+  }
+
+  .meta-leads-table {
+    min-width: 950px;
+  }
+
+}
+
+
+/* =========================
+   MOBILE
+========================= */
+
 @media (max-width: 600px) {
 
   .page-container {
@@ -196,7 +666,9 @@ th {
 
   .page-header {
     align-items: flex-start;
+
     flex-direction: column;
+
     gap: 16px;
   }
 
