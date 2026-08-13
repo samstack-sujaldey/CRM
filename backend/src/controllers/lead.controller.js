@@ -1,5 +1,4 @@
 const leadService = require("../services/lead.service");
-const capiService = require("../services/capi.service");
 
 const getLeads = async (req, res, next) => {
 	try {
@@ -53,34 +52,16 @@ const updateLeadStatus = async (req, res, next) => {
 				message: "Status is required",
 			});
 		}
-		const updateLead = await leadService.updateLeadStatus(
+		const result = await leadService.updateLeadStatus(
 			req.params.id,
 			req.body.status,
 		);
 
-		let capiResult = null;
-
-		if (req.body.status === "SITE_VISITED") {
-			const eventId = `lead_${updateLead._id}_${status}`;
-
-			capiResult = await capiService.sendConversionEvent({
-				eventName: "Lead",
-				eventId,
-				email: updateLead.email,
-				phone: updateLead.phone,
-				customData: {
-					status: updateLead.status,
-					lead_id: updateLead._id.toString(),
-					source: updateLead.source,
-				},
-			});
-		}
-
 		res.status(200).json({
 			success: true,
 			message: "Lead status updated successfully",
-			data: updateLead,
-			capi: capiResult,
+			data: result.lead,
+			capi: result.capi,
 		});
 	} catch (err) {
 		next(err);

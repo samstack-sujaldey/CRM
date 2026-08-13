@@ -16,23 +16,4 @@ router.get("/pages/:pageId/forms", metaController.getPageForms);
 router.get("/forms/:formId/leads", metaController.getFormLeads);
 router.patch("/sync", metaController.syncLeads);
 
-router.post("/test-capi", async (req, res, next) => {
-	try {
-		const fakeLead = {
-			_id: "test-lead-001",
-			email: "test@meta.com",
-			phone: "9876543210",
-		};
-
-		const result = await sendLeadEvent(fakeLead);
-
-		res.json({
-			success: true,
-			data: result,
-		});
-	} catch (error) {
-		next(error);
-	}
-});
-
 module.exports = router;

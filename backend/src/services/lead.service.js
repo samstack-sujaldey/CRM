@@ -1,38 +1,52 @@
 const Lead = require("../models/lead.model");
+const {
+	sendConversionEvent,
+	getEventNameForStatus,
+} = require("./capi.service");
 
 const createLead = async (data) => {
 	return await Lead.create(data);
 };
 
-const updateLeadStatus = async (leadId, status) => {
-	const allowedStatus = [
-		"NEW",
-		"CONTACTED",
-		"INTERESTED",
-		"SITE_VISIT_SCHEDULED",
-		"SITE_VISITED",
-		"BOOKED",
-		"CLOSED",
-	];
-
-	if (!allowedStatus.includes(status)) {
-		const error = new Error("Invalid lead Status");
-		error.statusCode = 400;
-		throw error;
-	}
-	const lead = await Lead.findByIdAndUpdate(
-		leadId,
-		{ status: status },
-		{ new: true, runValidators: true },
-	);
+const updateLeadStatus = async (id, newStatus) => {
+	const lead = await Lead.findById(id);
 
 	if (!lead) {
-		const error = new Error("Lead Not Found");
-		error.statusCode = 400;
-		throw error;
+		throw new Error("Lead not found");
 	}
 
-	return lead;
+	const oldStatus = lead.status;
+
+	if (oldStatus == newStatus) {
+		return { lead, capi: null };
+	}
+
+	lead.status = newStatus;
+
+	await lead.save();
+
+	const eventName = getEventNameForStatus(newStatus);
+
+	let capiResult = null;
+
+	if (eventName) {
+		try {
+			capiResult = await sendConversionEvent({
+				lead,
+				eventName,
+				eventId: `${lead._id}-${newStatus}-${Date.now()}`,
+			});
+
+			console.log(`CAPI event sent: ${eventName} for lead ${lead._id}`);
+		} catch (error) {
+			console.error("========== CAPI ERROR ==========");
+			console.error("Message:", error.message);
+			console.error("Stack:", error.stack);
+			console.error("================================");
+		}
+	}
+
+	return { lead, capi: capiResult };
 };
 
 const getAllLeads = async () => {
