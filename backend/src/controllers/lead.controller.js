@@ -22,7 +22,7 @@ const getLead = async (req, res, next) => {
 		const lead = await leadService.getLeadById(req.params.id);
 
 		if (!lead) {
-			res.status(404).json({
+			return res.status(404).json({
 				success: false,
 				message: "Lead not found",
 			});

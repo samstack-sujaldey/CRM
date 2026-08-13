@@ -1,8 +1,8 @@
 const axios = require("axios");
 
-const getMetaUser = async (userAccessToken) => {
-  const apiVersion = process.env.META_API_VERSION || "v26.0";
+const apiVersion = process.env.META_API_VERSION || "v26.0";
 
+const getMetaUser = async (userAccessToken) => {
   if (!userAccessToken) {
     throw new Error("Missing required Meta API credentials");
   }
@@ -23,8 +23,6 @@ const getMetaUser = async (userAccessToken) => {
 };
 
 const getPages = async (userAccessToken) => {
-  const apiVersion = process.env.META_API_VERSION || "v26.0";
-
   if (!userAccessToken) {
     throw new Error("Missing required Meta API credentials");
   }
@@ -46,8 +44,6 @@ const getPages = async (userAccessToken) => {
 };
 
 const getPageForms = async (pageId, pageAccessToken) => {
-  const apiVersion = process.env.META_API_VERSION || "v26.0";
-
   if (!pageAccessToken) {
     throw new Error("Missing required Meta Page Access Token");
   }
@@ -68,8 +64,6 @@ const getPageForms = async (pageId, pageAccessToken) => {
 };
 
 const getFormLeads = async (formId, pageAccessToken) => {
-  const apiVersion = process.env.META_API_VERSION || "v26.0";
-
   if (!pageAccessToken) {
     throw new Error("Meta Page Access Token is not configured");
   }
