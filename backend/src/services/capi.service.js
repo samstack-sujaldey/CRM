@@ -1,6 +1,6 @@
 const axios = require("axios");
 const axiosRetry=require('axios-retry').default
-const crypto = require("crypto"); // 👈 ADD THIS
+const SHA256 = require("crypto-js/sha256"); 
 
 const capiClient = axios.create();
 
@@ -15,7 +15,7 @@ axiosRetry(capiClient, {
 // Helper function to format and hash data for Meta
 const hashData = (data) => {
   if (!data) return undefined;
-  return crypto.createHash("sha256").update(data.trim().toLowerCase()).digest("hex");
+  return SHA256(data.trim().toLowerCase()).toString();
 };
 
 const sendConversionEvent = async (accessToken, metaLeadId, newStatus,email,phone,dealValue,currency) => {

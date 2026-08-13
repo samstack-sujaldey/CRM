@@ -1,7 +1,7 @@
 const dotenv = require("dotenv");
 dotenv.config();
 const Page = require("../models/page.model"); // Make sure this is imported at the top!
-const crypto = require("crypto");
+const { v4: uuidv4 } = require("uuid");
 const axios = require("axios");
 const jwt = require("jsonwebtoken"); // <-- ADD THIS to sign tokens directly
 const MetaConnection = require("../models/meta.model");
@@ -13,7 +13,7 @@ const ApiVersion = process.env.META_API_VERSION;
 // 1. Start Meta OAuth (Remains exactly the same)
 const startMetaAuth = async (req, res) => {
 	try {
-		const state = crypto.randomBytes(16).toString("hex");
+		const state = uuidv4();
 		const authUrl = axios.getUri({
 			url: `https://www.facebook.com/${ApiVersion}/dialog/oauth`,
 			params: {
