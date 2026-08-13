@@ -67,7 +67,6 @@ const sendConversionEvent = async (accessToken, metaLeadId, newStatus,email,phon
       ] 
     };
 
-    console.log("SENDING TO META:", JSON.stringify(payload, null, 2));
 
     const url = `https://graph.facebook.com/v18.0/${pixelId}/events`;
     

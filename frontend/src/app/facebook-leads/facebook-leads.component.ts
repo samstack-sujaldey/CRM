@@ -42,7 +42,7 @@ export class FacebookLeadsComponent implements OnInit {
   forms: any[] = [];
   isLoadingForms = false;
   syncMessage = '';
-  
+
   // Leads State
   leads: Lead[] = [];
   searchText = '';
@@ -59,7 +59,7 @@ export class FacebookLeadsComponent implements OnInit {
   ngOnInit(): void {
     // Read the pageId from the URL (e.g. /facebook-pages/12345/leads)
     this.pageId = this.route.snapshot.paramMap.get('pageId') || '';
-    
+
     if (this.pageId) {
       this.loadForms();
       this.loadLeads();
@@ -91,24 +91,22 @@ export class FacebookLeadsComponent implements OnInit {
     });
   }
 
-  
+
 
  syncFormLeads(formId: string): void {
     this.isLoadingForms = true;
     this.syncMessage = "Syncing leads from Meta...";
-
-    console.log("SENDING TO BACKEND -> Page ID:", this.pageId, " | Form ID:", formId);
 
     // 🛑 VERIFY THIS LINE: Are both pageId and formId being passed?
     this.metaAuthService.syncLeads(this.pageId, formId).subscribe({
       next: (res) => {
         this.syncMessage = `Success! Synced ${res.totalFormMeta} leads.`;
         this.isLoadingForms = false;
-        this.loadLeads(); 
+        this.loadLeads();
       },
       error: (err) => {
         console.error("Error syncing leads:", err);
-        this.syncMessage = `Error: ${err.error?.message || "Failed to sync leads."}`; 
+        this.syncMessage = `Error: ${err.error?.message || "Failed to sync leads."}`;
         this.isLoadingForms = false;
       }
     });
@@ -120,7 +118,7 @@ export class FacebookLeadsComponent implements OnInit {
 
   loadLeads(): void {
     this.loading = true;
-    
+
     // ✅ FIX: Pass the pageId to the service
     this.leadService.getLeads(this.pageId).subscribe({
       next: (response) => {
@@ -181,10 +179,10 @@ export class FacebookLeadsComponent implements OnInit {
     // 1. Intercept if it's a Purchase
     if (lead.pendingStatus === 'CLOSED_WON') {
       const input = prompt('🎉 Deal closed! Please enter the final sale amount:');
-      
+
       if (input === null) {
         this.cancelStatusChange(lead);
-        return; 
+        return;
       }
 
       dealValue = parseFloat(input);
@@ -193,15 +191,15 @@ export class FacebookLeadsComponent implements OnInit {
         this.cancelStatusChange(lead);
         return;
       }
-      
+
       currency = 'INR'; // Set your default currency here
     }
 
     // 2. Call your updated service with the specific parameters
     this.leadService.updateLeadStatus(
-      lead._id || lead.id, 
-      lead.pendingStatus, 
-      dealValue, 
+      lead._id || lead.id,
+      lead.pendingStatus,
+      dealValue,
       currency
     ).subscribe({
       next: (response) => {
