@@ -249,46 +249,21 @@ export class FacebookLeadsComponent implements OnInit {
     this.syncMessage =
       'Syncing leads from Meta...';
 
-    console.log(
-      'SENDING TO BACKEND -> Page ID:',
-      this.pageId,
-      '| Form ID:',
-      formId
-    );
 
-    this.metaAuthService
-      .syncLeads(
-        this.pageId,
-        formId
-      )
-      .subscribe({
 
-        next: (res: any) => {
-
-          this.syncMessage =
-            `Success! Synced ${res.totalFormMeta} leads.`;
-
-          this.isLoadingForms = false;
-
-          this.loadLeads();
-        },
-
-        error: (err) => {
-
-          console.error(
-            'Error syncing leads:',
-            err
-          );
-
-          this.syncMessage =
-            `Error: ${
-              err.error?.message ||
-              'Failed to sync leads.'
-            }`;
-
-          this.isLoadingForms = false;
-        }
-      });
+    // 🛑 VERIFY THIS LINE: Are both pageId and formId being passed?
+    this.metaAuthService.syncLeads(this.pageId, formId).subscribe({
+      next: (res) => {
+        this.syncMessage = `Success! Synced ${res.totalFormMeta} leads.`;
+        this.isLoadingForms = false;
+        this.loadLeads(); 
+      },
+      error: (err) => {
+        console.error("Error syncing leads:", err);
+        this.syncMessage = `Error: ${err.error?.message || "Failed to sync leads."}`; 
+        this.isLoadingForms = false;
+      }
+    });
   }
 
 

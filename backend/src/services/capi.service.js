@@ -2,11 +2,12 @@ const axios = require("axios");
 const axiosRetry=require('axios-retry').default
 const crypto = require("crypto"); // 👈 ADD THIS
 
-axiosRetry(axios, {
-  retries: 3, // Number of times to retry
-  retryDelay: axiosRetry.exponentialDelay, // Waits 1s, then 2s, then 4s
+const capiClient = axios.create();
+
+axiosRetry(capiClient, {
+  retries: 3, 
+  retryDelay: axiosRetry.exponentialDelay, 
   retryCondition: (error) => {
-    // Retry on network errors or 5xx server errors from Meta
     return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status >= 500;
   }
 });
@@ -22,14 +23,10 @@ const sendConversionEvent = async (accessToken, metaLeadId, newStatus,email,phon
     const pixelId = process.env.META_PIXEL_ID;
     const capiToken = process.env.META_CAPI_TOKEN;
     if (!pixelId || !capiToken) {
-        console.log("Missing Pixel ID or CAPI Token. Skipping CAPI event.");
       return;
     }
 
-    // 🛑 CRITICAL: Do NOT send junk/lost leads back to Meta. 
-    // If you do, Meta will optimize to find you MORE junk leads!
     if (newStatus === "CLOSED_LOST") {
-        console.log("Ignored CLOSED_LOST lead to protect Meta algorithm.");
         return; 
     }
 
@@ -41,12 +38,11 @@ const sendConversionEvent = async (accessToken, metaLeadId, newStatus,email,phon
     if (newStatus === "NEGOTIATION") eventName = "SubmitApplication";
     if (newStatus === "CLOSED_WON") eventName = "Purchase"; 
 
-    // 1. Create the base custom_data object
     const customData = {
       crm_status: newStatus 
     };
 
-    // 2. 🛑 Inject the required parameters if it's a Purchase
+    // Inject the required parameters if it's a Purchase
     if (eventName === "Purchase") {
       customData.currency = currency || "INR"; 
       customData.value = Number(dealValue) || 1;
@@ -59,7 +55,7 @@ const sendConversionEvent = async (accessToken, metaLeadId, newStatus,email,phon
           action_source: "other",
           user_data: {
             lead_id: metaLeadId ,
-            em: hashData(email), // 👈 Send hashed email
+            em: hashData(email), 
             ph: hashData(phone)
           },
           custom_data: customData
@@ -67,22 +63,17 @@ const sendConversionEvent = async (accessToken, metaLeadId, newStatus,email,phon
       ] 
     };
 
-    console.log("SENDING TO META:", JSON.stringify(payload, null, 2));
-
-    const url = `https://graph.facebook.com/v18.0/${pixelId}/events`;
-    
-    await axios.post(url, payload, {
+    const url = `https://graph.facebook.com/${process.env.META_API_VERSION}/${pixelId}/events`;
+    await capiClient.post(url, payload, {
       params: { access_token: capiToken }
     });
 
     console.log(`✅ CAPI Success: Sent '${eventName}' event for lead ${metaLeadId}`);
-
   } catch (error) {
     console.error("❌ CAPI Error:", error.response?.data || error.message);
   }
 };
 
 module.exports = {
-  // ... your other exports like getPages, etc.
   sendConversionEvent
 };

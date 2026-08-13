@@ -6,12 +6,14 @@ const MetaConnection = require("../models/meta.model");
 const metaService = require("../services/meta.service");
 const leadService = require("../services/lead.service");
 
+const ApiVersion=process.env.META_API_VERSION;
+
 // 1. Start Meta OAuth (Remains exactly the same)
 const startMetaAuth = async (req, res) => {
   try {
     const state = crypto.randomBytes(16).toString("hex");
     const authUrl = axios.getUri({
-      url: "https://www.facebook.com/v26.0/dialog/oauth",
+      url: `https://www.facebook.com/${ApiVersion}/dialog/oauth`,
       params: {
         client_id: process.env.META_APP_ID,
         redirect_uri: process.env.META_REDIRECT_URI,
@@ -42,7 +44,7 @@ const metaAuthCallback = async (req, res) => {
 
     // Step 1: Exchange code for access token
     const tokenResponse = await axios.get(
-      "https://graph.facebook.com/v26.0/oauth/access_token",
+      `https://graph.facebook.com/${ApiVersion}/oauth/access_token`,
       {
         params: {
           client_id: process.env.META_APP_ID,
@@ -55,7 +57,7 @@ const metaAuthCallback = async (req, res) => {
     const tokenData = tokenResponse.data;
 
     // Step 2: Fetch Meta User Profile (Just need ID and Name now!)
-    const meResponse = await axios.get("https://graph.facebook.com/v26.0/me", {
+    const meResponse = await axios.get(`https://graph.facebook.com/${ApiVersion}/me`, {
       params: {
         fields: "id,name",
         access_token: tokenData.access_token,
@@ -66,7 +68,7 @@ const metaAuthCallback = async (req, res) => {
     let grantedPermissions = [];
     try {
       const permResponse = await axios.get(
-        "https://graph.facebook.com/v26.0/me/permissions",
+        `https://graph.facebook.com/${ApiVersion}/me/permissions`,
         {
           params: { access_token: tokenData.access_token },
         },
@@ -172,22 +174,20 @@ const getPages = async (req, res, next) => {
     const pagesResponse = await metaService.getPages(userAccessToken);
     const fbPages = pagesResponse.data || [];
 
-    const savedPages = [];
-
-    // 2. Save or update each page in your database
-    for (const fbPage of fbPages) {
-      const page = await Page.findOneAndUpdate(
+    const pagePromises = fbPages.map((fbPage) => {
+      return Page.findOneAndUpdate(
         { pageId: fbPage.id },
         {
           metaUserId: metaUserId,
           pageId: fbPage.id,
           name: fbPage.name,
-          accessToken: fbPage.access_token, // Save the Page Token securely!
+          accessToken: fbPage.access_token, 
         },
-        { upsert: true, new: true },
+        { upsert: true, new: true }
       );
-      savedPages.push(page);
-    }
+    });
+
+    const savedPages = await Promise.all(pagePromises);
 
     // 3. Strip the access tokens before sending to the frontend for security
     const safePagesForFrontend = savedPages.map((page) => ({

@@ -9,20 +9,35 @@ dotenv.config();
 connectdb();
 
 const app = express();
-app.use(cors());
+
+
+const allowedOrigins = [
+  process.env.FRONTEND_URL 
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200 
+};
+
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 app.get("/", (req, res) => {
-	res.json("API working");
+    res.json("API working");
 });
 
 app.use("/api/leads", leadRoutes);
 app.use("/api/meta", metaRoutes);
 
-
-
 app.listen(process.env.PORT, () => {
-	console.log(`server is running on port ${process.env.PORT}`);
-
-	
+    console.log(`server is running on port ${process.env.PORT}`);
 });
