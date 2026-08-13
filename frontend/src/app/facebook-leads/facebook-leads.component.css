@@ -61,8 +61,9 @@
 
 .filter-card {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
-  justify-content: center;
   gap: 20px;
   padding: 20px;
   margin-bottom: 20px;
@@ -70,11 +71,15 @@
 }
 
 .search-field {
-  width: 320px;
+  flex: 1;
+  min-width: 0;
+  width: auto;
 }
 
 .status-filter {
   width: 220px;
+  min-width: 220px;
+  flex-shrink: 0;
 }
 
 
@@ -604,20 +609,24 @@ th {
 ========================= */
 
 @media (max-width: 900px) {
-
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 
   .filter-card {
-    flex-direction: column;
-    align-items: stretch;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+  }
+
+  .search-field {
+    width: 320px;
   }
 
   .status-filter {
-    width: 100%;
+    width: 220px;
   }
-
 }
 
 

@@ -15,6 +15,11 @@ router.get("/me", authMiddleware, metaController.getMetaUser);
 router.get("/pages", authMiddleware, metaController.getPages);
 router.get("/pages/:pageId/forms", authMiddleware, metaController.getPageForms);
 router.get("/forms/:formId/leads", authMiddleware, metaController.getFormLeads);
+router.post(
+  "/sync-leads",
+  authMiddleware,
+  metaController.syncAllMetaLeads
+);
 router.patch("/sync", authMiddleware, metaController.syncLeads);
 
 module.exports = router;

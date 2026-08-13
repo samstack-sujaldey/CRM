@@ -68,7 +68,17 @@ export class FacebookLeadsService {
     }
   );
 }
-
+syncAllMetaLeads(): Observable<any> {
+  return this.http.post(
+    'http://localhost:5000/api/meta/sync-leads',
+    {},
+    {
+      headers: 
+        this.getAuthHeaders()
+      
+    }
+  );
+}
   getLead(id: string): Observable<LeadResponse> {
     return this.http.get<LeadResponse>(`${this.apiUrl}/${id}`, { headers: this.getAuthHeaders() });
   }

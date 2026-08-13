@@ -38,112 +38,164 @@ const updateLeadStatus = async (leadId, status) => {
 };
 
 const getAllLeads = async (pageId) => {
-	if (!pageId) {
-		const error = new Error("pageId is required");
-		error.statusCode = 400;
-		throw error;
-	}
+    if (!pageId) {
+        const error = new Error("pageId is required");
+        error.statusCode = 400;
+        throw error;
+    }
 
-	// 1. Find the selected page in our database
-	const page = await Page.findOne({ pageId });
+    // 1. Find selected page in MongoDB
+    const page = await Page.findOne({ pageId });
 
-	if (!page) {
-		const error = new Error("Page not found");
-		error.statusCode = 404;
-		throw error;
-	}
+    if (!page) {
+        const error = new Error("Page not found");
+        error.statusCode = 404;
+        throw error;
+    }
 
-	// 2. Get the Page Access Token
-	const pageAccessToken = page.accessToken;
+    // 2. Get Page Access Token
+    const pageAccessToken = page.accessToken;
 
-	// 3. Get all forms belonging to this page
-	const formsResponse = await metaService.getPageForms(
-		pageId,
-		pageAccessToken
-	);
+    // 3. Get all forms of this page
+    const formsResponse = await metaService.getPageForms(
+        pageId,
+        pageAccessToken
+    );
 
-	const forms = formsResponse.data || [];
+    const forms = formsResponse.data || [];
 
-	// 4. Fetch leads for every form
-	const formsWithLeads = await Promise.all(
-		forms.map(async (form) => {
-			try {
-				const leadsResponse = await metaService.getFormLeads(
-					form.id,
-					pageAccessToken
-				);
+    // 4. Fetch leads from every form
+    const formsWithLeads = await Promise.all(
+        forms.map(async (form) => {
+            try {
+                const leadsResponse = await metaService.getFormLeads(
+                    form.id,
+                    pageAccessToken
+                );
 
-				const leads = await Promise.all(
-					(leadsResponse.data || []).map(async (metaLead) => {
+                const leads = await Promise.all(
+                    (leadsResponse.data || []).map(async (metaLead) => {
 
-						const fieldData = {};
+                        // Convert Meta field_data into simple object
+                        const fieldData = {};
 
-						(metaLead.field_data || []).forEach((field) => {
-							fieldData[field.name] = field.values?.[0] || "";
-						});
+                        (metaLead.field_data || []).forEach((field) => {
+                            fieldData[field.name] =
+                                field.values?.[0] || "";
+                        });
 
-						// Find existing MongoDB lead
-						let existingLead = await Lead.findOne({
-							metaLeadId: metaLead.id,
-						});
+                        // Prepare MongoDB lead data
+                        const leadData = {
+                            name:
+                                fieldData.full_name ||
+                                fieldData.name ||
+                                "Unknown",
 
-						// If this Meta lead does not exist in MongoDB,
-						// create it so we can store its CRM status.
-						if (!existingLead) {
-							existingLead = await Lead.create({
-								name: fieldData.full_name || "Unknown",
-								email: fieldData.email || "",
-								phone: fieldData.phone_number || "",
-								source: "META",
-								metaLeadId: metaLead.id,
-								status: "NEW",
-							});
-						}
+                            email:
+                                fieldData.email || "",
 
-						return {
-							leadId: metaLead.id,
-							mongoLeadId: existingLead._id,
+                            phone:
+                                fieldData.phone_number ||
+                                fieldData.phone ||
+                                "",
 
-							createdTime: metaLead.created_time,
+                            source: "META",
 
-							name: fieldData.full_name || "",
-							email: fieldData.email || "",
-							phone: fieldData.phone_number || "",
+                            metaLeadId: metaLead.id,
 
-							status: existingLead.status,
+                            status: "NEW",
 
-							fields: fieldData,
-						};
-					})
-				);
+                            pageId: page.pageId,
+                            pageName: page.name,
 
-				return {
-					formId: form.id,
-					formName: form.name || "Unnamed Form",
-					leads,
-				};
-			} catch (error) {
-				console.error(
-					`Failed to fetch leads for form ${form.id}:`,
-					error.message
-				);
+                            formId: form.id,
+                            formName:
+                                form.name ||
+                                "Unnamed Form",
 
-				return {
-					formId: form.id,
-					formName: form.name || "Unnamed Form",
-					leads: [],
-					error: "Failed to fetch leads for this form",
-				};
-			}
-		})
-	);
+                            createdAt: metaLead.created_time
+                                ? new Date(metaLead.created_time)
+                                : undefined,
+                        };
 
-	// 5. Return page + forms + leads
-	return {
-		pageId: page.pageId,
-		pageName: page.name,
-		forms: formsWithLeads,
-	};
+                        // Check MongoDB and create only if missing
+                        const result =
+                            await createLeadIfNotExists(leadData);
+
+                        const existingLead = result.lead;
+
+                        // Return lead for frontend
+                        return {
+                            leadId: metaLead.id,
+
+                            mongoLeadId: existingLead._id,
+
+                            createdTime:
+                                metaLead.created_time,
+
+                            name:
+                                fieldData.full_name ||
+                                fieldData.name ||
+                                "",
+
+                            email:
+                                fieldData.email || "",
+
+                            phone:
+                                fieldData.phone_number ||
+                                fieldData.phone ||
+                                "",
+
+                            // IMPORTANT:
+                            // Keep MongoDB status if lead already exists
+                            status: existingLead.status,
+
+                            fields: fieldData,
+                        };
+                    })
+                );
+
+                return {
+                    formId: form.id,
+
+                    formName:
+                        form.name ||
+                        "Unnamed Form",
+
+                    leads,
+                };
+
+            } catch (error) {
+
+                console.error(
+                    `Failed to fetch leads for form ${form.id}:`,
+                    error.message
+                );
+
+                return {
+                    formId: form.id,
+
+                    formName:
+                        form.name ||
+                        "Unnamed Form",
+
+                    leads: [],
+
+                    error:
+                        "Failed to fetch leads for this form",
+                };
+            }
+        })
+    );
+
+    // 5. Return page + forms + leads
+    return {
+        pageId: page.pageId,
+
+        pageName: page.name,
+
+        forms: formsWithLeads,
+    };
 };
 
 const getLeadById = async (LeadId) => {
@@ -169,10 +221,144 @@ const createLeadIfNotExists = async (leadData) => {
 	};
 };
 
+const syncAllMetaLeads = async () => {
+
+	const pages = await Page.find({});
+
+	let totalFetched = 0;
+	let totalCreated = 0;
+	let totalExisting = 0;
+
+	const syncedPages = [];
+
+	for (const page of pages) {
+
+		console.log(
+			`Syncing page: ${page.name} (${page.pageId})`
+		);
+
+		// Get all forms of this page
+		const formsResponse = await metaService.getPageForms(
+			page.pageId,
+			page.accessToken
+		);
+
+		const forms = formsResponse.data || [];
+
+		const syncedForms = [];
+
+		for (const form of forms) {
+
+			// Get all leads from this form
+			const leadsResponse = await metaService.getFormLeads(
+				form.id,
+				page.accessToken
+			);
+
+			const metaLeads = leadsResponse.data || [];
+
+			let formCreated = 0;
+			let formExisting = 0;
+
+			for (const metaLead of metaLeads) {
+
+				totalFetched++;
+
+				// Convert Meta lead → MongoDB structure
+				const fieldData = metaLead.field_data || [];
+
+				const getFieldValue = (fieldName) => {
+
+					const field = fieldData.find(
+						(item) => item.name === fieldName
+					);
+
+					return field?.values?.[0] || "";
+				};
+
+				const leadData = {
+
+					name:
+						getFieldValue("full_name") ||
+						getFieldValue("name") ||
+						"Unknown",
+
+					email:
+						getFieldValue("email"),
+
+					phone:
+						getFieldValue("phone_number") ||
+						getFieldValue("phone"),
+
+					source: "META",
+
+					status: "NEW",
+
+					metaLeadId: metaLead.id,
+
+					property: "",
+
+					notes: "",
+
+					// Useful for identifying where lead came from
+					pageId: page.pageId,
+
+					pageName: page.name,
+
+					formId: form.id,
+
+					formName: form.name || "Unnamed Form",
+
+					createdAt: metaLead.created_time
+						? new Date(metaLead.created_time)
+						: undefined,
+				};
+
+				const result =
+					await createLeadIfNotExists(leadData);
+
+				if (result.created) {
+
+					totalCreated++;
+					formCreated++;
+
+				} else {
+
+					totalExisting++;
+					formExisting++;
+
+				}
+			}
+
+			syncedForms.push({
+				formId: form.id,
+				formName: form.name || "Unnamed Form",
+				fetched: metaLeads.length,
+				created: formCreated,
+				existing: formExisting,
+			});
+		}
+
+		syncedPages.push({
+			pageId: page.pageId,
+			pageName: page.name,
+			forms: syncedForms,
+		});
+	}
+
+	return {
+		totalFetched,
+		totalCreated,
+		totalExisting,
+		pages: syncedPages,
+	};
+};
+
 module.exports = {
 	createLead,
 	updateLeadStatus,
 	getAllLeads,
 	getLeadById,
 	createLeadIfNotExists,
+	syncAllMetaLeads,
 };

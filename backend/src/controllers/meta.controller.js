@@ -4,11 +4,12 @@ const jwt = require("jsonwebtoken"); // <-- ADD THIS to sign tokens directly
 const MetaConnection = require("../models/meta.model");
 const metaService = require("../services/meta.service");
 const leadService = require("../services/lead.service");
+const Page = require("../models/page.model"); // Import the new model
 
 // 1. Start Meta OAuth (Remains exactly the same)
 const startMetaAuth = async (req, res) => {
   try {
-    const state = crypto.randomBytes(16).toString("hex"); 
+    const state = crypto.randomBytes(16).toString("hex");
     const authUrl = axios.getUri({
       url: "https://www.facebook.com/v26.0/dialog/oauth",
       params: {
@@ -16,7 +17,7 @@ const startMetaAuth = async (req, res) => {
         redirect_uri: process.env.META_REDIRECT_URI,
         config_id: process.env.META_CONFIG_ID,
         response_type: "code",
-        state, 
+        state,
       }
     });
     return res.status(200).json({ success: true, authUrl });
@@ -47,7 +48,7 @@ const metaAuthCallback = async (req, res) => {
     const tokenData = tokenResponse.data;
 
     // Step 2: Fetch Meta User Profile (Just need ID and Name now!)
-  const meResponse = await axios.get("https://graph.facebook.com/v26.0/me", {
+    const meResponse = await axios.get("https://graph.facebook.com/v26.0/me", {
       params: {
         fields: "id,name",
         access_token: tokenData.access_token
@@ -60,7 +61,7 @@ const metaAuthCallback = async (req, res) => {
       const permResponse = await axios.get("https://graph.facebook.com/v26.0/me/permissions", {
         params: { access_token: tokenData.access_token }
       });
-      
+
       // Meta returns an array of objects: { permission: "email", status: "granted" }
       if (permResponse.data && permResponse.data.data) {
         grantedPermissions = permResponse.data.data
@@ -83,7 +84,7 @@ const metaAuthCallback = async (req, res) => {
         name: meData.name,
         accessToken: tokenData.access_token,
         tokenType: tokenData.token_type || "bearer",
-        permissions:grantedPermissions,
+        permissions: grantedPermissions,
         expiresAt,
         configurationId: process.env.META_CONFIG_ID,
       },
@@ -92,14 +93,14 @@ const metaAuthCallback = async (req, res) => {
 
     // Step 4: Sign a JWT using the MetaConnection's MongoDB _id
     const appToken = jwt.sign(
-      { id: connection._id }, 
-      process.env.JWT_SECRET, 
+      { id: connection._id },
+      process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
     // Step 5: Redirect to frontend with the token
     return res.redirect(`${process.env.FRONTEND_URL}/facebook-leads?token=${appToken}`);
-    
+
   } catch (error) {
     console.error("Meta OAuth callback error:", error.response?.data || error.message);
     return res.redirect(`${process.env.FRONTEND_URL}/login?error=server_error`);
@@ -110,9 +111,9 @@ const metaAuthCallback = async (req, res) => {
 const getMetaStatus = async (req, res) => {
   try {
     // req.user is now the MetaConnection document itself
-    const connection = req.user; 
-    
-    const isConnected = connection && 
+    const connection = req.user;
+
+    const isConnected = connection &&
       (!connection.expiresAt || new Date(connection.expiresAt).getTime() > Date.now());
 
     return res.status(200).json({
@@ -130,7 +131,7 @@ const getMetaUser = async (req, res, next) => {
   try {
     // req.user is populated by your authMiddleware
     const userAccessToken = req.user.accessToken;
-    
+
     const user = await metaService.getMetaUser(userAccessToken);
     res.json({
       success: true,
@@ -141,7 +142,6 @@ const getMetaUser = async (req, res, next) => {
   }
 };
 
-const Page = require("../models/page.model"); // Import the new model
 
 const getPages = async (req, res, next) => {
   try {
@@ -151,7 +151,7 @@ const getPages = async (req, res, next) => {
     const userAccessToken = req.user.accessToken;
     const metaUserId = req.user.metaUserId;
 
-    
+
 
     // 1. Fetch the pages from Meta
     const pagesResponse = await metaService.getPages(userAccessToken);
@@ -224,53 +224,142 @@ const getFormLeads = async (req, res, next) => {
 
 const syncLeads = async (req, res, next) => {
   try {
-    // Frontend only needs to provide the pageId and formId
     const { pageId, formId } = req.body;
 
-    if (!formId || !pageId) {
+    if (!pageId || !formId) {
       return res.status(400).json({
         success: false,
         message: "Both pageId and formId are required",
       });
     }
 
-    // 1. Retrieve the secure Page Token directly from your database
-    const pageRecord = await Page.findOne({ pageId: pageId });
+    // 1. Find the page and its secure Page Access Token
+    const pageRecord = await Page.findOne({ pageId });
+
     if (!pageRecord || !pageRecord.accessToken) {
-      return res.status(404).json({ success: false, message: "Page token not found in database. Please resync pages." });
+      return res.status(404).json({
+        success: false,
+        message:
+          "Page token not found in database. Please resync pages.",
+      });
     }
 
-    // 2. Fetch leads using the secure database token
-    const metaResponse = await metaService.getFormLeads(formId, pageRecord.accessToken);
+    const pageAccessToken = pageRecord.accessToken;
+
+    // 2. Find the form so we can store its name
+    const formsResponse = await metaService.getPageForms(
+      pageId,
+      pageAccessToken
+    );
+
+    const form = (formsResponse.data || []).find(
+      (f) => f.id === formId
+    );
+
+    if (!form) {
+      return res.status(404).json({
+        success: false,
+        message: "Form not found for this page",
+      });
+    }
+
+    // 3. Fetch leads from Meta
+    const metaResponse = await metaService.getFormLeads(
+      formId,
+      pageAccessToken
+    );
+
     const leads = metaResponse.data || [];
+
     const results = [];
 
+    // 4. Process every Meta lead
     for (const metaLead of leads) {
       const fields = {};
 
       for (const field of metaLead.field_data || []) {
-        fields[field.name] = field.values?.[0] || "";
+        fields[field.name] =
+          field.values?.[0] || "";
       }
 
       const leadData = {
         metaLeadId: metaLead.id,
-        pageId: pageId, // Reference the page ID in your Lead model as you suggested
-        name: fields.full_name || "",
+
+        pageId: pageId,
+        pageName: pageRecord.name,
+
+        formId: formId,
+        formName: form.name || "Unnamed Form",
+
+        name:
+          fields.full_name ||
+          fields.name ||
+          "Unknown",
+
         email: fields.email || "",
-        phone: fields.phone_number || "",
+
+        phone:
+          fields.phone_number ||
+          fields.phone ||
+          "",
+
         source: "META",
+
         status: "NEW",
+
+        createdAt: metaLead.created_time
+          ? new Date(metaLead.created_time)
+          : undefined,
       };
 
-      const result = await leadService.createLeadIfNotExists(leadData);
+      // 5. Create only if the lead doesn't already exist
+      const result =
+        await leadService.createLeadIfNotExists(
+          leadData
+        );
+
       results.push(result);
     }
 
-    res.json({
+    // 6. Return sync result
+    return res.json({
       success: true,
-      totalFormMeta: leads.length,
+
+      pageId,
+
+      formId,
+
+      formName: form.name || "Unnamed Form",
+
+      totalMetaLeads: leads.length,
+
+      created: results.filter(
+        (item) => item.created
+      ).length,
+
+      alreadyExists: results.filter(
+        (item) => !item.created
+      ).length,
+
       results,
     });
+
+  } catch (err) {
+    next(err);
+  }
+};
+
+const syncAllMetaLeads = async (req, res, next) => {
+  try {
+    const result =
+      await leadService.syncAllMetaLeads();
+
+    return res.json({
+      success: true,
+      message: "All Meta leads synced successfully",
+      data: result,
+    });
+
   } catch (err) {
     next(err);
   }
@@ -285,4 +374,5 @@ module.exports = {
   getPageForms,
   getFormLeads,
   syncLeads,
+  syncAllMetaLeads,
 };

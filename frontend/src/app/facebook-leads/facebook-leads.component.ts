@@ -460,25 +460,38 @@ get bookings(): number {
   // SYNC FROM META DATABASE ROUTE
   // =========================
 
-  syncLeads(): void {
-    if (!this.selectedPageId || !this.selectedFormId) {
-      this.syncMessage = "Please select both a Facebook Page and a Lead Form.";
-      return;
-    }
+ syncLeads(): void {
+  console.log('SYNC BUTTON CLICKED');
 
-    this.loading = true;
-    this.syncMessage = "Syncing leads from Meta...";
+  this.loading = true;
+  this.syncMessage = 'Syncing all leads from Meta...';
 
-    this.metaAuthService.syncLeads(this.selectedPageId, this.selectedFormId).subscribe({
-      next: (res) => {
-        this.syncMessage = `Success! Synced ${res.totalFormMeta} leads from Meta.`;
-        this.loadLeads(); // Refresh table data
-      },
-      error: (err) => {
-        console.error("Error syncing leads from Meta:", err);
-        this.loading = false;
-        this.syncMessage = "Failed to sync leads from Meta.";
+  this.leadService.syncAllMetaLeads().subscribe({
+    next: (res) => {
+      console.log('SYNC SUCCESS:', res);
+
+      this.loading = false;
+
+      this.syncMessage =
+        `Success! Fetched ${res.data.totalFetched} leads. ` +
+        `Created ${res.data.totalCreated} new leads. ` +
+        `${res.data.totalExisting} already existed.`;
+
+      // Refresh currently selected page
+      if (this.selectedPageId) {
+        this.loadLeads();
       }
-    });
-  }
+    },
+
+    error: (err) => {
+      console.error('Error syncing leads from Meta:', err);
+
+      this.loading = false;
+
+      this.syncMessage =
+        err?.error?.message ||
+        'Failed to sync leads from Meta.';
+    }
+  });
+}
 }
