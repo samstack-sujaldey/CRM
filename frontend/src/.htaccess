@@ -1,0 +1,14 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # If your app is in a subfolder, change this to /subfolder/
+  RewriteBase /
+  
+  # Don't rewrite files or directories that actually exist
+  RewriteCond %{REQUEST_FILENAME} -s [OR]
+  RewriteCond %{REQUEST_FILENAME} -l [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^.*$ - [NC,L]
+
+  # Rewrite all other requests to index.html
+  RewriteRule ^(.*) /index.html [NC,L]
+</IfModule>

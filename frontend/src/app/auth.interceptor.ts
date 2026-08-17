@@ -14,18 +14,17 @@ export class AuthInterceptor implements HttpInterceptor {
 
   intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     
-    // 1. Attach the current access token to every outgoing request
+    // Attach the current access token to every outgoing request
     request = this.addToken(request, this.authService.getToken());
 
-    // 2. Pass it to the next handler and watch for errors
+    // Pass it to the next handler and watch for errors
     return next.handle(request).pipe(
       catchError(error => {
-        // 3. If the backend says the token is expired (401)
+        // If the backend says the token is expired 
         if (error instanceof HttpErrorResponse && error.status === 401) {
           return this.handle401Error(request, next);
         }
         
-        // If it's any other error (like 404 or 500), just let it fail normally
         return throwError(() => error);
       })
     );
