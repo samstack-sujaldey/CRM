@@ -4,7 +4,7 @@ const createLead = async (data) => {
 	return await Lead.create(data);
 };
 
-const updateLeadStatus = async (leadId, status,dealValue,currency) => {
+const updateLeadStatus = async (leadId, status, dealValue, currency) => {
 	const allowedStatus = [
 		"NEW",
 		"CONTACTED",
@@ -22,22 +22,18 @@ const updateLeadStatus = async (leadId, status,dealValue,currency) => {
 		throw error;
 	}
 	const updateData = { status: status };
-    
-    // 2. 🎯 Enforce the Revenue Rule
-    if (status === "CLOSED_WON") {
-        // Only save the deal value if the deal is actually won
-        if (dealValue !== undefined) updateData.dealValue = dealValue;
-        if (currency !== undefined) updateData.currency = currency;
-    } else {
-        // If the status is ANYTHING else, wipe the revenue value
-        updateData.dealValue = null; 
-    }
-    // Save it to MongoDB
-	const lead = await Lead.findByIdAndUpdate(
-		leadId,
-		updateData, // 👈 Pass the updateData object here instead of just { status }
-		{ returnDocument: 'after', runValidators: true }
-	);
+
+	if (status === "CLOSED_WON") {
+		// Only save the deal value if the deal is actually won
+		if (dealValue !== undefined) updateData.dealValue = dealValue;
+		if (currency !== undefined) updateData.currency = currency;
+	} else {
+		updateData.dealValue = null;
+	}
+	const lead = await Lead.findByIdAndUpdate(leadId, updateData, {
+		returnDocument: "after",
+		runValidators: true,
+	});
 
 	if (!lead) {
 		const error = new Error("Lead Not Found");
@@ -49,20 +45,19 @@ const updateLeadStatus = async (leadId, status,dealValue,currency) => {
 };
 
 const getAllLeads = async (metaUserId, pageObjectId) => {
-    const query = { metaUserId: metaUserId };
-    
-    if (pageObjectId) {
-        query.page = pageObjectId; 
-    }
+	const query = { metaUserId: metaUserId };
 
-    // Populate replaces the 'page' ID with the actual Page document
-    return await Lead.find(query)
-        .populate("page", "name pageId forms") 
-        .sort({ createdAt: -1 });
+	if (pageObjectId) {
+		query.page = pageObjectId;
+	}
+
+	return await Lead.find(query)
+		.populate("page", "name pageId forms")
+		.sort({ createdAt: -1 });
 };
 
-const getLeadById = async (LeadId) => {
-	return await Lead.findById(LeadId);
+const getLeadById = async (LeadId, metaUserId) => {
+	return await Lead.findOne({ _id: LeadId, metaUserId: metaUserId });
 };
 
 const createLeadIfNotExists = async (leadData) => {

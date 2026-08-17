@@ -1,17 +1,12 @@
 const leadService = require("../services/lead.service");
-const {sendConversionEvent}=require('.././services/capi.service')
+const { sendConversionEvent } = require("../services/capi.service");
+const Lead = require("../models/lead.model");
 
 const getLeads = async (req, res, next) => {
 	try {
-        // Extract the logged-in user's ID
-        const metaUserId = req.user.metaUserId;
-
-        // Pass the ID to the service
+		const metaUserId = req.user.metaUserId;
 		const leads = await leadService.getAllLeads(metaUserId);
-		res.json({
-			success: true,
-			data: leads,
-		});
+		res.json({ success: true, data: leads });
 	} catch (err) {
 		next(err);
 	}
@@ -19,19 +14,16 @@ const getLeads = async (req, res, next) => {
 
 const getLead = async (req, res, next) => {
 	try {
-		const lead = await leadService.getLeadById(req.params.id);
-
+		const lead = await leadService.getLeadById(
+			req.params.id,
+			req.user.metaUserId,
+		);
 		if (!lead) {
-			return res.status(404).json({
-				success: false,
-				message: "Lead not found",
-			});
+			return res
+				.status(404)
+				.json({ success: false, message: "Lead not found" });
 		}
-
-		res.json({
-			success: true,
-			data: lead,
-		});
+		res.json({ success: true, data: lead });
 	} catch (err) {
 		next(err);
 	}
@@ -39,45 +31,57 @@ const getLead = async (req, res, next) => {
 
 const createLead = async (req, res, next) => {
 	try {
-		const lead = await leadService.createLead(req.body);
-		res.status(201).json({
-			success: true,
-			data: lead,
+		const { metaUserId, page, ...leadData } = req.body;
+		const lead = await leadService.createLead({
+			...leadData,
+			metaUserId: req.user.metaUserId,
+			page,
 		});
+		res.status(201).json({ success: true, data: lead });
 	} catch (err) {
 		next(err);
 	}
 };
 
-// Inside lead.controller.js
-
 const updateLeadStatus = async (req, res, next) => {
 	try {
 		const { status, dealValue, currency } = req.body;
-
 		if (!status) {
-			return res.status(400).json({
-				success: false,
-				message: "Status is required",
-			});
+			return res
+				.status(400)
+				.json({ success: false, message: "Status is required" });
 		}
 
-		// 1. Update status in MongoDB (Optionally update dealValue in DB if your Schema supports it)
+		// 1. Update status in MongoDB
 		const updateLead = await leadService.updateLeadStatus(
 			req.params.id,
 			status,
-			dealValue, // 👈 Add this line to pass it to the DB
-            currency
+			dealValue,
+			currency,
 		);
 
 		if (!updateLead) {
-			return res.status(404).json({
-				success: false,
-				message: "Lead not Found",
-			});
+			return res
+				.status(404)
+				.json({ success: false, message: "Lead not Found" });
 		}
 
-		// 2. 🚀 Pass the dealValue and currency to Meta Conversions API
+		// 2. Fetch page-level pixel mapping if available, fallback to user-level
+		let targetPixelId = req.user.pixelId || "";
+		let targetCapiToken = req.user.capiToken || "";
+		if (updateLead.page) {
+			const populatedLead = await Lead.findById(updateLead._id).populate(
+				"page",
+			);
+			if (populatedLead?.page?.pixelId) {
+				targetPixelId = populatedLead.page.pixelId;
+			}
+			if (populatedLead?.page?.capiToken) {
+				targetCapiToken = populatedLead.page.capiToken;
+			}
+		}
+
+		// 3. Send conversion event using user's OAuth access token
 		if (updateLead.metaLeadId) {
 			sendConversionEvent(
 				req.user.accessToken,
@@ -85,8 +89,10 @@ const updateLeadStatus = async (req, res, next) => {
 				updateLead.status,
 				updateLead.email,
 				updateLead.phone,
-				updateLead.dealValue, // 👈 Pass dealValue
-				updateLead.currency   // 👈 Pass currency
+				updateLead.dealValue,
+				updateLead.currency,
+				targetPixelId,
+				targetCapiToken,
 			);
 		}
 

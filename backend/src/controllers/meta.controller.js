@@ -1,16 +1,14 @@
 const dotenv = require("dotenv");
 dotenv.config();
-const Page = require("../models/Page.model"); 
+const Page = require("../models/Page.model");
 const crypto = require("crypto");
 const axios = require("axios");
-const jwt = require("jsonwebtoken"); 
+const jwt = require("jsonwebtoken");
 const MetaConnection = require("../models/meta.model");
 const metaService = require("../services/meta.service");
 const leadService = require("../services/lead.service");
+const ApiVersion = process.env.META_API_VERSION || "v26.0";
 
-const ApiVersion = process.env.META_API_VERSION;
-
-// 1. Start Meta OAuth (Remains exactly the same)
 const startMetaAuth = async (req, res) => {
 	try {
 		const state = crypto.randomBytes(16).toString("hex");
@@ -21,6 +19,8 @@ const startMetaAuth = async (req, res) => {
 				redirect_uri: process.env.META_REDIRECT_URI,
 				config_id: process.env.META_CONFIG_ID,
 				response_type: "code",
+				// Scopes are ignored if config_id restricts them. Ensure config_id matches these!
+				scope: "ads_management,ads_read,business_management,leads_retrieval,pages_show_list,pages_read_engagement",
 				state,
 			},
 		});
@@ -34,18 +34,16 @@ const startMetaAuth = async (req, res) => {
 	}
 };
 
-// 2. Callback (Streamlined!)
 const metaAuthCallback = async (req, res) => {
 	try {
 		const { code, error } = req.query;
-
 		if (error || !code) {
 			return res.redirect(
 				`${process.env.FRONTEND_URL}/login?error=oauth_failed`,
 			);
 		}
 
-		// Step 1: Exchange code for access token
+		// Step 1: Exchange code for short-lived access token
 		const tokenResponse = await axios.get(
 			`https://graph.facebook.com/${ApiVersion}/oauth/access_token`,
 			{
@@ -57,15 +55,33 @@ const metaAuthCallback = async (req, res) => {
 				},
 			},
 		);
-		const tokenData = tokenResponse.data;
+		const shortLivedToken = tokenResponse.data.access_token;
 
-		// Step 2: Fetch Meta User Profile (Just need ID and Name now!)
+		// Step 2: Upgrade to a 60-day Long-Lived User Access Token
+		let finalAccessToken = shortLivedToken;
+		let tokenExpiresIn = tokenResponse.data.expires_in;
+
+		try {
+			const longLivedData =
+				await metaService.exchangeLongLivedToken(shortLivedToken);
+			if (longLivedData.access_token) {
+				finalAccessToken = longLivedData.access_token;
+				tokenExpiresIn = longLivedData.expires_in;
+			}
+		} catch (exchangeErr) {
+			console.warn(
+				"Long-lived token exchange warning:",
+				exchangeErr.message,
+			);
+		}
+
+		// Step 3: Fetch Meta User Profile
 		const meResponse = await axios.get(
 			`https://graph.facebook.com/${ApiVersion}/me`,
 			{
 				params: {
 					fields: "id,name",
-					access_token: tokenData.access_token,
+					access_token: finalAccessToken,
 				},
 			},
 		);
@@ -76,11 +92,9 @@ const metaAuthCallback = async (req, res) => {
 			const permResponse = await axios.get(
 				`https://graph.facebook.com/${ApiVersion}/me/permissions`,
 				{
-					params: { access_token: tokenData.access_token },
+					params: { access_token: finalAccessToken },
 				},
 			);
-
-			// Meta returns an array of objects: { permission: "email", status: "granted" }
 			if (permResponse.data && permResponse.data.data) {
 				grantedPermissions = permResponse.data.data
 					.filter((p) => p.status === "granted")
@@ -90,35 +104,63 @@ const metaAuthCallback = async (req, res) => {
 			console.error("Failed to fetch permissions:", permError.message);
 		}
 
-		const expiresAt = tokenData.expires_in
-			? new Date(Date.now() + tokenData.expires_in * 1000)
+		const expiresAt = tokenExpiresIn
+			? new Date(Date.now() + tokenExpiresIn * 1000)
 			: null;
 
-		// Step 3: Upsert the MetaConnection (This IS the user now)
+		const existingConnection = await MetaConnection.findOne({
+			metaUserId: meData.id,
+		});
+
+		const updatePayload = {
+			metaUserId: meData.id,
+			name: meData.name,
+			accessToken: finalAccessToken,
+			tokenType: "bearer",
+			permissions: grantedPermissions,
+			expiresAt,
+			configurationId: process.env.META_CONFIG_ID || "",
+		};
+
+		if (existingConnection) {
+			updatePayload.pixelId = existingConnection.pixelId || "";
+			updatePayload.capiToken = existingConnection.capiToken || "";
+		}
+
 		const connection = await MetaConnection.findOneAndUpdate(
 			{ metaUserId: meData.id },
-			{
-				metaUserId: meData.id,
-				name: meData.name,
-				accessToken: tokenData.access_token,
-				tokenType: tokenData.token_type || "bearer",
-				permissions: grantedPermissions,
-				expiresAt,
-				configurationId: process.env.META_CONFIG_ID,
-			},
+			updatePayload,
 			{ upsert: true, new: true },
 		);
 
-		// Step 4: Sign a JWT using the MetaConnection's MongoDB _id
+		// Step 4: Fetch user's available pixels and datasets
+		try {
+			const flattenedPixels =
+				await metaService.getAllUserPixelsAndDatasets(finalAccessToken);
+
+			const defaultPixelId =
+				flattenedPixels.length > 0 ? flattenedPixels[0].id : "";
+
+			await MetaConnection.findByIdAndUpdate(connection._id, {
+				availablePixels: flattenedPixels,
+				pixelId: connection.pixelId || defaultPixelId,
+			});
+			console.log(
+				`[OAuth Success] Attached default pixel: ${defaultPixelId || "None found"}`,
+			);
+		} catch (pixelErr) {
+			console.warn(
+				"Failed to fetch pixels during OAuth:",
+				pixelErr.message,
+			);
+		}
+
 		const appToken = jwt.sign(
 			{ id: connection._id },
 			process.env.JWT_SECRET,
-			{
-				expiresIn: "7d",
-			},
+			{ expiresIn: "7d" },
 		);
 
-		// Step 5: Redirect to frontend with the token
 		return res.redirect(
 			`${process.env.FRONTEND_URL}/login?token=${appToken}`,
 		);
@@ -133,17 +175,13 @@ const metaAuthCallback = async (req, res) => {
 	}
 };
 
-// 3. Status Check (Streamlined!)
 const getMetaStatus = async (req, res) => {
 	try {
-		// req.user is now the MetaConnection document itself
 		const connection = req.user;
-
 		const isConnected =
 			connection &&
 			(!connection.expiresAt ||
 				new Date(connection.expiresAt).getTime() > Date.now());
-
 		return res.status(200).json({
 			success: true,
 			connected: !!isConnected,
@@ -160,14 +198,9 @@ const getMetaStatus = async (req, res) => {
 
 const getMetaUser = async (req, res, next) => {
 	try {
-		// req.user is populated by your authMiddleware
 		const userAccessToken = req.user.accessToken;
-
 		const user = await metaService.getMetaUser(userAccessToken);
-		res.json({
-			success: true,
-			data: user,
-		});
+		res.json({ success: true, data: user });
 	} catch (err) {
 		next(err);
 	}
@@ -176,26 +209,48 @@ const getMetaUser = async (req, res, next) => {
 const getPages = async (req, res, next) => {
 	try {
 		if (!req.user || !req.user.accessToken) {
-			return res.status(401).json({
-				success: false,
-				message: "Unauthorized or missing Meta token.",
-			});
+			return res
+				.status(401)
+				.json({
+					success: false,
+					message: "Unauthorized or missing Meta token.",
+				});
 		}
 		const userAccessToken = req.user.accessToken;
 		const metaUserId = req.user.metaUserId;
 
-		// 1. Fetch the pages from Meta
 		const pagesResponse = await metaService.getPages(userAccessToken);
 		const fbPages = pagesResponse.data || [];
 
-		const pagePromises = fbPages.map((fbPage) => {
+		// Fallback: If availablePixels is empty in req.user, run a scan now
+		let userAvailablePixels = req.user.availablePixels || [];
+		if (userAvailablePixels.length === 0) {
+			userAvailablePixels =
+				await metaService.getAllUserPixelsAndDatasets(userAccessToken);
+			await MetaConnection.findByIdAndUpdate(req.user._id, {
+				availablePixels: userAvailablePixels,
+			});
+		}
+
+		const defaultPixelId =
+			req.user.pixelId ||
+			(userAvailablePixels.length > 0 ? userAvailablePixels[0].id : "");
+
+		const pagePromises = fbPages.map(async (fbPage) => {
+			const existingPage = await Page.findOne({ pageId: fbPage.id });
+			const currentPixelId = existingPage?.pixelId || "";
+
 			return Page.findOneAndUpdate(
 				{ pageId: fbPage.id },
 				{
-					metaUserId: metaUserId,
-					pageId: fbPage.id,
-					name: fbPage.name,
-					accessToken: fbPage.access_token,
+					$set: {
+						user: req.user._id,
+						metaUserId: metaUserId,
+						pageId: fbPage.id,
+						name: fbPage.name,
+						accessToken: fbPage.access_token,
+						pixelId: currentPixelId || defaultPixelId,
+					},
 				},
 				{ upsert: true, new: true },
 			);
@@ -203,15 +258,66 @@ const getPages = async (req, res, next) => {
 
 		const savedPages = await Promise.all(pagePromises);
 
-		// 3. Strip the access tokens before sending to the frontend for security
 		const safePagesForFrontend = savedPages.map((page) => ({
 			pageId: page.pageId,
 			name: page.name,
+			pixelId: page.pixelId || "",
+			capiToken: page.capiToken || "",
 		}));
 
 		res.json({
 			success: true,
 			data: safePagesForFrontend,
+			availablePixels: userAvailablePixels,
+		});
+	} catch (err) {
+		next(err);
+	}
+};
+
+const getUserPixels = async (req, res, next) => {
+	try {
+		const storedPixels = req.user.availablePixels || [];
+		if (storedPixels.length > 0) {
+			return res.json({ success: true, data: storedPixels });
+		}
+
+		const userAccessToken = req.user.accessToken;
+		const flattenedPixels =
+			await metaService.getAllUserPixelsAndDatasets(userAccessToken);
+
+		// Cache it to the user object
+		await MetaConnection.findByIdAndUpdate(req.user._id, {
+			availablePixels: flattenedPixels,
+		});
+
+		res.json({ success: true, data: flattenedPixels });
+	} catch (err) {
+		next(err);
+	}
+};
+
+const setPagePixel = async (req, res, next) => {
+	try {
+		const { pageId } = req.params;
+		const { pixelId, capiToken } = req.body;
+
+		const page = await Page.findOneAndUpdate(
+			{ pageId: pageId, user: req.user._id },
+			{ pixelId, capiToken },
+			{ new: true },
+		);
+
+		if (!page) {
+			return res
+				.status(404)
+				.json({ success: false, message: "Page not found" });
+		}
+
+		res.json({
+			success: true,
+			message: "Pixel and CAPI token mapped to page successfully",
+			data: { pageId: page.pageId, pixelId: page.pixelId },
 		});
 	} catch (err) {
 		next(err);
@@ -221,38 +327,34 @@ const getPages = async (req, res, next) => {
 const getPageForms = async (req, res, next) => {
 	try {
 		const { pageId } = req.params;
-
 		const pageRecord = await Page.findOne({ pageId: pageId });
 		if (!pageRecord || !pageRecord.accessToken) {
 			return res
 				.status(404)
 				.json({ success: false, message: "Page not found." });
 		}
+		if (
+			!pageRecord.user ||
+			pageRecord.user.toString() !== req.user._id.toString()
+		) {
+			return res
+				.status(403)
+				.json({ success: false, message: "Access denied." });
+		}
 
-		// 1. Fetch live forms from Meta
 		const formsData = await metaService.getPageForms(
 			pageId,
 			pageRecord.accessToken,
 		);
-
 		const extractedForms = formsData.data.map((form) => ({
 			formId: form.id,
 			name: form.name,
 		}));
 
-		// ✅ THE FIX: If the page is somehow missing the user ID, inject it before saving!
-		if (!pageRecord.user) {
-			pageRecord.user = req.user.id;
-		}
-
-		// Update forms and save safely
 		pageRecord.forms = extractedForms;
 		await pageRecord.save();
 
-		res.json({
-			success: true,
-			data: extractedForms,
-		});
+		res.json({ success: true, data: extractedForms });
 	} catch (err) {
 		next(err);
 	}
@@ -261,14 +363,9 @@ const getPageForms = async (req, res, next) => {
 const getFormLeads = async (req, res, next) => {
 	try {
 		const { formId } = req.params;
-		// Extract page token from query string
-		const pageToken = req.query.pageToken || req.user.accessToken;
-
+		const pageToken = req.user.accessToken;
 		const leads = await metaService.getFormLeads(formId, pageToken);
-		res.json({
-			success: true,
-			data: leads,
-		});
+		res.json({ success: true, data: leads });
 	} catch (err) {
 		next(err);
 	}
@@ -276,18 +373,17 @@ const getFormLeads = async (req, res, next) => {
 
 const syncLeads = async (req, res, next) => {
 	try {
-		// 1. Extract the IDs sent from the Angular frontend payload
 		const { pageId, formId } = req.body;
-
-		// 2. If they are missing, throw a 400 Bad Request (this is what you just experienced!)
 		if (!pageId || !formId) {
-			return res.status(400).json({
-				success: false,
-				message: "Both pageId and formId are required to sync leads.",
-			});
+			return res
+				.status(400)
+				.json({
+					success: false,
+					message:
+						"Both pageId and formId are required to sync leads.",
+				});
 		}
 
-		// 3. Find the specific page in your DB to get its secure access token
 		const pageRecord = await Page.findOne({ pageId: pageId });
 		if (!pageRecord || !pageRecord.accessToken) {
 			return res
@@ -298,12 +394,19 @@ const syncLeads = async (req, res, next) => {
 				});
 		}
 
-		// 4. Fetch the live leads from Meta using the correct Page Token
+		if (
+			!pageRecord.user ||
+			pageRecord.user.toString() !== req.user._id.toString()
+		) {
+			return res
+				.status(403)
+				.json({ success: false, message: "Access denied." });
+		}
+
 		const leadsFromMeta = await metaService.getFormLeads(
 			formId,
 			pageRecord.accessToken,
 		);
-
 		if (!leadsFromMeta || !leadsFromMeta.data) {
 			return res
 				.status(400)
@@ -313,12 +416,10 @@ const syncLeads = async (req, res, next) => {
 				});
 		}
 
-		// 5. Loop through Meta's response and save each lead to your database
 		let newLeadsCount = 0;
 		for (const fbLead of leadsFromMeta.data) {
-			// Helper function to extract specific fields from Meta's field_data array
 			const getFieldValue = (fieldName) => {
-				const field = fbLead.field_data.find(
+				const field = fbLead.field_data?.find(
 					(f) => f.name === fieldName,
 				);
 				return field ? field.values[0] : "";
@@ -332,10 +433,9 @@ const syncLeads = async (req, res, next) => {
 				getFieldValue("email") || "no-email@provided.com";
 			const extractedPhone = getFieldValue("phone_number") || "";
 
-			// Format the data to match your Lead model exactly
 			const leadData = {
 				metaUserId: req.user.metaUserId,
-				page: pageRecord._id, // The Mongo ObjectId we added earlier!
+				page: pageRecord._id,
 				formId: formId,
 				metaLeadId: fbLead.id,
 				name: extractedName,
@@ -345,14 +445,12 @@ const syncLeads = async (req, res, next) => {
 				status: "NEW",
 			};
 
-			// Upsert the lead using your lead service
 			const result = await leadService.createLeadIfNotExists(leadData);
 			if (result.created) {
 				newLeadsCount++;
 			}
 		}
 
-		// 6. Send the success response back to Angular
 		res.status(200).json({
 			success: true,
 			message: "Sync completed successfully",
@@ -370,6 +468,8 @@ module.exports = {
 	getMetaStatus,
 	getMetaUser,
 	getPages,
+	getUserPixels,
+	setPagePixel,
 	getPageForms,
 	getFormLeads,
 	syncLeads,

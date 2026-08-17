@@ -18,12 +18,19 @@ export interface MetaStatusResponse {
   expiresAt?: string | null;
 }
 
+export interface PixelOption {
+  id: string;
+  name: string;
+  adAccountId: string;
+  adAccountName: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class MetaAuthService {
 
-  private readonly baseUrl = `${environment.apiUrl}/meta`; // Ensure this matches your Node routes!
+  private readonly baseUrl = `${environment.apiUrl}/meta`;
 
   constructor(private http: HttpClient) {}
 
@@ -38,7 +45,6 @@ export class MetaAuthService {
     const token = localStorage.getItem('app_auth_token');
     
     if (!token) {
-      // Returns a safe fallback instantly without hitting the backend
       return of({ success: true, connected: false });
     }
 
@@ -72,10 +78,6 @@ export class MetaAuthService {
     });
   }
 
-  // ==========================================
-  // NEW METHODS FOR SYNCING
-  // ==========================================
-  
   getPages(): Observable<any> {
     return this.http.get(`${this.baseUrl}/pages`, { headers: this.getAuthHeaders() });
   }
@@ -85,7 +87,7 @@ export class MetaAuthService {
   }
 
   syncLeads(pageId: string, formId: string): Observable<any> {
-    const payload = { 
+    const payload: any = { 
       pageId: pageId, 
       formId: formId 
     };
@@ -93,5 +95,13 @@ export class MetaAuthService {
     return this.http.post(`${this.baseUrl}/sync`, payload, {
       headers: this.getAuthHeaders()
     });
+  }
+
+  getUserPixels(): Observable<{ success: boolean; data: PixelOption[] }> {
+    return this.http.get(`${this.baseUrl}/pages/pixels`, { headers: this.getAuthHeaders() }) as Observable<{ success: boolean; data: PixelOption[] }>;
+  }
+
+  setPagePixel(pageId: string, pixelId: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/pages/${pageId}/pixel`, { pixelId }, { headers: this.getAuthHeaders() });
   }
 }

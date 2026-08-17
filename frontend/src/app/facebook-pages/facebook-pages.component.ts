@@ -6,7 +6,9 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MetaAuthService } from '../services/Meta_auth.service';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MetaAuthService, PixelOption } from '../services/Meta_auth.service';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-facebook-pages',
@@ -17,21 +19,26 @@ import { MetaAuthService } from '../services/Meta_auth.service';
     MatCardModule,
     MatIconModule,
     MatTableModule,
-    MatTooltipModule
+    MatTooltipModule,
+    MatSnackBarModule,
   ],
   templateUrl: './facebook-pages.component.html',
   styleUrls: ['./facebook-pages.component.css']
 })
 export class FacebookPagesComponent implements OnInit {
   pages: any[] = [];
+  pixels: PixelOption[] = [];
   isLoading = false;
+  isPixelLoading = false;
   metaConnected = false;
 
-  displayedColumns: string[] = ['pageId', 'name', 'actions'];
+  displayedColumns: string[] = ['pageId', 'name', 'pixel', 'actions'];
 
   constructor(
     private metaAuthService: MetaAuthService,
-    private router: Router
+    private router: Router,
+    private authService: AuthService,
+    private snackBar: MatSnackBar
   ) {}
 
   ngOnInit(): void {
@@ -73,6 +80,9 @@ export class FacebookPagesComponent implements OnInit {
         } else {
           this.pages = [];
         }
+        if (res.availablePixels && res.availablePixels.length > 0) {
+          this.pixels = res.availablePixels;
+        }
         this.isLoading = false;
       },
       error: (err) => {
@@ -82,7 +92,33 @@ export class FacebookPagesComponent implements OnInit {
     });
   }
 
+  onPixelChange(page: any, event: any): void {
+    const selectedPixelId = event.target.value;
+    this.metaAuthService.setPagePixel(page.pageId, selectedPixelId).subscribe({
+      next: () => {
+        this.snackBar.open('Pixel updated successfully', '', {
+          duration: 2000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+        });
+        this.loadPages();
+      },
+      error: (err) => {
+        this.snackBar.open(err.error?.message || 'Failed to update pixel', '', {
+          duration: 2000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+        });
+      }
+    });
+  }
+
   viewLeads(pageId: string): void {
-   this.router.navigate([`/facebook-pages/${pageId}/leads`]);
+    this.router.navigate([`/facebook-pages/${pageId}/leads`]);
+  }
+
+  logout(): void {
+    this.authService.logout();
+    this.router.navigate(['/login']);
   }
 }

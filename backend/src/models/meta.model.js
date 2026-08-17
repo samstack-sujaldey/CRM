@@ -35,6 +35,23 @@ const metaConnectionSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+
+    pixelId: {
+      type: String,
+      default: "",
+    },
+    capiToken: {
+      type: String,
+      default: "",
+    },
+    availablePixels: [
+      {
+        id: String,
+        name: String,
+        adAccountId: String,
+        adAccountName: String,
+      },
+    ],
   },
   {
     timestamps: true,

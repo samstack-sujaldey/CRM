@@ -22,6 +22,8 @@ import {
 } from "../services/facebook-leads.service";
 
 import { MetaAuthService } from "../services/Meta_auth.service";
+import { AuthService } from "../services/auth.service";
+import { Router } from "@angular/router";
 
 @Component({
 	selector: "app-facebook-leads",
@@ -83,7 +85,14 @@ export class FacebookLeadsComponent implements OnInit {
 		private route: ActivatedRoute,
 		private dialog: MatDialog,
 		private snackBar: MatSnackBar,
+		private authService: AuthService,
+		private router: Router
 	) {}
+
+	logout(): void {
+		this.authService.logout();
+		this.router.navigate(['/login']);
+	}
 
 	// =========================
 	// INIT
