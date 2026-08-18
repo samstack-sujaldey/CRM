@@ -131,7 +131,7 @@ const metaAuthCallback = async (req, res) => {
 		const connection = await MetaConnection.findOneAndUpdate(
 			{ metaUserId: meData.id },
 			updatePayload,
-			{ upsert: true, returnDocument: after },
+			{ upsert: true, returnDocument: "after" },
 		);
 
 		// Step 4: Fetch user's available pixels and datasets
@@ -253,7 +253,7 @@ const getPages = async (req, res, next) => {
 						pixelId: currentPixelId || defaultPixelId,
 					},
 				},
-				{ upsert: true, returnDocument: after },
+				{ upsert: true, returnDocument: "after" },
 			);
 		});
 
@@ -306,7 +306,7 @@ const setPagePixel = async (req, res, next) => {
 		const page = await Page.findOneAndUpdate(
 			{ pageId: pageId, user: req.user._id },
 			{ pixelId, capiToken },
-			{ returnDocument: after },
+			{ returnDocument: "after" },
 		);
 
 		if (!page) {
@@ -367,41 +367,40 @@ const getPageForms = async (req, res, next) => {
 };
 
 const getFormLeads = async (req, res, next) => {
-  try {
-    const { formId } = req.params;
+	try {
+		const { formId } = req.params;
 
-    const pageRecord = await Page.findOne({
-      user: req.user._id,
-      forms: {
-        $elemMatch: {
-          formId: formId
-        }
-      }
-    });
+		const pageRecord = await Page.findOne({
+			user: req.user._id,
+			forms: {
+				$elemMatch: {
+					formId: formId,
+				},
+			},
+		});
 
-    if (!pageRecord) {
-      return res.status(404).json({
-        success: false,
-        message: "Form not found."
-      });
-    }
+		if (!pageRecord) {
+			return res.status(404).json({
+				success: false,
+				message: "Form not found.",
+			});
+		}
 
-    const leads = await Lead.find({
-      page: pageRecord._id,
-      formId: formId
-    }).sort({
-      createdAt: -1
-    });
+		const leads = await Lead.find({
+			page: pageRecord._id,
+			formId: formId,
+		}).sort({
+			createdAt: -1,
+		});
 
-    res.json({
-      success: true,
-      data: leads
-    });
-
-  } catch (err) {
-    console.error("Error loading form leads:", err);
-    next(err);
-  }
+		res.json({
+			success: true,
+			data: leads,
+		});
+	} catch (err) {
+		console.error("Error loading form leads:", err);
+		next(err);
+	}
 };
 
 const syncLeads = async (req, res, next) => {
