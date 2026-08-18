@@ -130,7 +130,7 @@ const metaAuthCallback = async (req, res) => {
 		const connection = await MetaConnection.findOneAndUpdate(
 			{ metaUserId: meData.id },
 			updatePayload,
-			{ upsert: true, new: true },
+			{ upsert: true, returnDocument: after },
 		);
 
 		// Step 4: Fetch user's available pixels and datasets
@@ -209,12 +209,10 @@ const getMetaUser = async (req, res, next) => {
 const getPages = async (req, res, next) => {
 	try {
 		if (!req.user || !req.user.accessToken) {
-			return res
-				.status(401)
-				.json({
-					success: false,
-					message: "Unauthorized or missing Meta token.",
-				});
+			return res.status(401).json({
+				success: false,
+				message: "Unauthorized or missing Meta token.",
+			});
 		}
 		const userAccessToken = req.user.accessToken;
 		const metaUserId = req.user.metaUserId;
@@ -240,6 +238,8 @@ const getPages = async (req, res, next) => {
 			const existingPage = await Page.findOne({ pageId: fbPage.id });
 			const currentPixelId = existingPage?.pixelId || "";
 
+			metaService.subscribePageToApp(fbPage.id, fbPage.access_token);
+
 			return Page.findOneAndUpdate(
 				{ pageId: fbPage.id },
 				{
@@ -252,7 +252,7 @@ const getPages = async (req, res, next) => {
 						pixelId: currentPixelId || defaultPixelId,
 					},
 				},
-				{ upsert: true, new: true },
+				{ upsert: true, returnDocument: after },
 			);
 		});
 
@@ -305,7 +305,7 @@ const setPagePixel = async (req, res, next) => {
 		const page = await Page.findOneAndUpdate(
 			{ pageId: pageId, user: req.user._id },
 			{ pixelId, capiToken },
-			{ new: true },
+			{ returnDocument: after },
 		);
 
 		if (!page) {
@@ -328,6 +328,7 @@ const getPageForms = async (req, res, next) => {
 	try {
 		const { pageId } = req.params;
 		const pageRecord = await Page.findOne({ pageId: pageId });
+
 		if (!pageRecord || !pageRecord.accessToken) {
 			return res
 				.status(404)
@@ -351,8 +352,12 @@ const getPageForms = async (req, res, next) => {
 			name: form.name,
 		}));
 
-		pageRecord.forms = extractedForms;
-		await pageRecord.save();
+		// THE FIX: Directly update the database using $set instead of .save()
+		await Page.findOneAndUpdate(
+			{ pageId: pageId },
+			{ $set: { forms: extractedForms } },
+			{ returnDocument: "after" },
+		);
 
 		res.json({ success: true, data: extractedForms });
 	} catch (err) {
@@ -375,23 +380,18 @@ const syncLeads = async (req, res, next) => {
 	try {
 		const { pageId, formId } = req.body;
 		if (!pageId || !formId) {
-			return res
-				.status(400)
-				.json({
-					success: false,
-					message:
-						"Both pageId and formId are required to sync leads.",
-				});
+			return res.status(400).json({
+				success: false,
+				message: "Both pageId and formId are required to sync leads.",
+			});
 		}
 
 		const pageRecord = await Page.findOne({ pageId: pageId });
 		if (!pageRecord || !pageRecord.accessToken) {
-			return res
-				.status(404)
-				.json({
-					success: false,
-					message: "Page token not found. Sync pages first.",
-				});
+			return res.status(404).json({
+				success: false,
+				message: "Page token not found. Sync pages first.",
+			});
 		}
 
 		if (
@@ -408,12 +408,10 @@ const syncLeads = async (req, res, next) => {
 			pageRecord.accessToken,
 		);
 		if (!leadsFromMeta || !leadsFromMeta.data) {
-			return res
-				.status(400)
-				.json({
-					success: false,
-					message: "No leads returned from Meta.",
-				});
+			return res.status(400).json({
+				success: false,
+				message: "No leads returned from Meta.",
+			});
 		}
 
 		let newLeadsCount = 0;
@@ -462,6 +460,111 @@ const syncLeads = async (req, res, next) => {
 	}
 };
 
+// 1. GET: Webhook Verification (Handshake with Meta)
+const verifyWebhook = (req, res) => {
+	const mode = req.query["hub.mode"];
+	const token = req.query["hub.verify_token"];
+	const challenge = req.query["hub.challenge"];
+
+	if (
+		mode === "subscribe" &&
+		token === process.env.META_WEBHOOK_VERIFY_TOKEN
+	) {
+		console.log("[Webhook] Verified successfully with Meta");
+		return res.status(200).send(challenge);
+	} else {
+		console.warn("[Webhook] Verification failed. Token mismatch.");
+		return res.sendStatus(403);
+	}
+};
+
+// 2. POST: Real-Time Lead Ingestion Webhook
+const handleWebhook = async (req, res) => {
+	// Acknowledge Meta immediately with 200 OK so Meta doesn't retry/time out
+	res.status(200).send("EVENT_RECEIVED");
+
+	try {
+		const body = req.body;
+
+		if (body.object !== "page") {
+			return;
+		}
+
+		for (const entry of body.entry || []) {
+			const pageId = entry.id;
+
+			// Find the page in MongoDB to get its stored access token
+			const pageRecord = await Page.findOne({ pageId: pageId });
+			if (!pageRecord || !pageRecord.accessToken) {
+				console.warn(
+					`[Webhook] Page ${pageId} not found in database or missing token`,
+				);
+				continue;
+			}
+
+			for (const change of entry.changes || []) {
+				if (change.field === "leadgen") {
+					const leadgenId = change.value?.leadgen_id;
+					const formId = change.value?.form_id;
+
+					if (!leadgenId) continue;
+
+					console.log(
+						`[Webhook] New real-time lead detected: ${leadgenId} for page ${pageId}`,
+					);
+
+					// Fetch full lead data from Meta Graph API using page token
+					const fbLead = await metaService.getLeadDetails(
+						leadgenId,
+						pageRecord.accessToken,
+					);
+
+					const getFieldValue = (fieldName) => {
+						const field = fbLead.field_data?.find(
+							(f) => f.name === fieldName,
+						);
+						return field ? field.values[0] : "";
+					};
+
+					const extractedName =
+						getFieldValue("full_name") ||
+						getFieldValue("first_name") ||
+						"Unknown";
+					const extractedEmail =
+						getFieldValue("email") || "no-email@provided.com";
+					const extractedPhone = getFieldValue("phone_number") || "";
+
+					const leadData = {
+						metaUserId: pageRecord.metaUserId,
+						page: pageRecord._id,
+						formId: formId || fbLead.form_id || "Unknown",
+						metaLeadId: leadgenId,
+						name: extractedName,
+						email: extractedEmail,
+						phone: extractedPhone,
+						source: "META",
+						status: "NEW",
+					};
+
+					const result =
+						await leadService.createLeadIfNotExists(leadData);
+					if (result.created) {
+						console.log(
+							`[Webhook] Lead ${leadgenId} automatically saved to DB`,
+						);
+					} else {
+						console.log(
+							`[Webhook] Lead ${leadgenId} already existed`,
+						);
+					}
+				}
+			}
+		}
+	} catch (error) {
+		console.error("[Webhook Error]:", error.message);
+	}
+};
+
 module.exports = {
 	startMetaAuth,
 	metaAuthCallback,
@@ -473,4 +576,6 @@ module.exports = {
 	getPageForms,
 	getFormLeads,
 	syncLeads,
+	handleWebhook,
+	verifyWebhook,
 };

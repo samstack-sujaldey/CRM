@@ -221,6 +221,50 @@ const getAllUserPixelsAndDatasets = async (userAccessToken) => {
 	return uniquePixels;
 };
 
+// Fetch individual lead details by leadgen_id
+const getLeadDetails = async (leadId, pageAccessToken) => {
+	if (!pageAccessToken || !leadId) {
+		throw new Error("Lead ID and Page Access Token are required");
+	}
+	try {
+		const response = await axios.get(
+			`https://graph.facebook.com/${apiVersion}/${leadId}`,
+			{
+				headers: { Authorization: `Bearer ${pageAccessToken}` },
+			},
+		);
+		return response.data;
+	} catch (error) {
+		throw new Error(
+			error.response?.data?.error?.message ||
+				"Failed to fetch lead details",
+		);
+	}
+};
+
+// Subscribes a Facebook Page to your app's webhooks so Meta starts forwarding lead events
+const subscribePageToApp = async (pageId, pageAccessToken) => {
+	try {
+		const response = await axios.post(
+			`https://graph.facebook.com/${apiVersion}/${pageId}/subscribed_apps`,
+			null,
+			{
+				params: {
+					subscribed_fields: "leadgen",
+					access_token: pageAccessToken,
+				},
+			},
+		);
+		return response.data;
+	} catch (error) {
+		console.warn(
+			`[Webhook Note] Could not subscribe page ${pageId}:`,
+			error.response?.data?.error?.message || error.message,
+		);
+		return null;
+	}
+};
+
 module.exports = {
 	getMetaUser,
 	getPages,
@@ -228,4 +272,6 @@ module.exports = {
 	getFormLeads,
 	exchangeLongLivedToken,
 	getAllUserPixelsAndDatasets,
+	getLeadDetails,
+	subscribePageToApp,
 };
