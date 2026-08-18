@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const axios = require("axios");
 const jwt = require("jsonwebtoken");
 const MetaConnection = require("../models/meta.model");
+const Lead = require("../models/lead.model");
 const metaService = require("../services/meta.service");
 const leadService = require("../services/lead.service");
 const ApiVersion = process.env.META_API_VERSION || "v26.0";
@@ -366,14 +367,41 @@ const getPageForms = async (req, res, next) => {
 };
 
 const getFormLeads = async (req, res, next) => {
-	try {
-		const { formId } = req.params;
-		const pageToken = req.user.accessToken;
-		const leads = await metaService.getFormLeads(formId, pageToken);
-		res.json({ success: true, data: leads });
-	} catch (err) {
-		next(err);
-	}
+  try {
+    const { formId } = req.params;
+
+    const pageRecord = await Page.findOne({
+      user: req.user._id,
+      forms: {
+        $elemMatch: {
+          formId: formId
+        }
+      }
+    });
+
+    if (!pageRecord) {
+      return res.status(404).json({
+        success: false,
+        message: "Form not found."
+      });
+    }
+
+    const leads = await Lead.find({
+      page: pageRecord._id,
+      formId: formId
+    }).sort({
+      createdAt: -1
+    });
+
+    res.json({
+      success: true,
+      data: leads
+    });
+
+  } catch (err) {
+    console.error("Error loading form leads:", err);
+    next(err);
+  }
 };
 
 const syncLeads = async (req, res, next) => {
