@@ -5,14 +5,14 @@
       <p>Select a Meta page to view and sync its leads</p>
     </div>
 
-    <div>
+    <div class = "mat-buttons">
       <button *ngIf="!metaConnected" mat-stroked-button color="primary" (click)="connectFacebook()">
         <mat-icon>link</mat-icon> Connect Facebook
       </button>
       <button *ngIf="metaConnected" mat-raised-button color="primary" (click)="loadPages()" [disabled]="isLoading">
         <mat-icon>sync</mat-icon> {{ isLoading ? 'Syncing...' : 'Sync Pages' }}
       </button>
-      <button mat-stroked-button color="warn" (click)="logout()">
+      <button class = "designed" mat-stroked-button color="warn" (click)="logout()">
         <mat-icon>logout</mat-icon> Logout
       </button>
     </div>
@@ -33,10 +33,10 @@
       <ng-container matColumnDef="pixel">
         <th mat-header-cell *matHeaderCellDef> Pixel </th>
         <td mat-cell *matCellDef="let page">
-          <select [value]="page.pixelId || ''" (change)="onPixelChange(page, $event)" style="min-width: 200px; padding: 6px;">
+          <select [(ngModel)]="page.pixelId" (ngModelChange)="onPixelChange(page, $event)" style="min-width: 200px; padding: 6px;">
             <option value="">-- Select Pixel --</option>
             <option *ngFor="let pixel of pixels" [value]="pixel.id">
-              {{ pixel.name }} ({{ pixel.adAccountName }})
+              {{ pixel.name }} 
             </option>
           </select>
         </td>

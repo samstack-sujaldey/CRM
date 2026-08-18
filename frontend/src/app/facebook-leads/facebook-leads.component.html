@@ -26,18 +26,18 @@
           <mat-option value="QUALIFIED">Qualified</mat-option>
           <mat-option value="SITE_VISIT_SCHEDULED">Site Visit Scheduled</mat-option>
           <mat-option value="SITE_VISITED">Site Visit Completed</mat-option>
-          <mat-option value="NEGOTIATION">Negotiation / Booking</mat-option>
           <mat-option value="CLOSED_WON">Closed Won (Purchase)</mat-option>
           <mat-option value="CLOSED_LOST">Closed Lost (Junk)</mat-option>
         </mat-select>
       </mat-form-field>
 
-      <button mat-stroked-button color="primary" routerLink="/facebook-pages" style="height: 48px;">
+      <button mat-stroked-button color="primary" routerLink="/facebook-pages" style=" background-color:rgb(143, 15, 143); color:whitesmoke; height: 48px;border-radius: 10px;">
         <mat-icon>arrow_back</mat-icon>
         Back to Pages
       </button>
       
-      <button mat-stroked-button color="warn" (click)="logout()" style="height: 48px;">
+      <button mat-stroked-button color="warn" (click)="logout()" style="background-color: rgb(214, 60, 60);
+  color : white;height: 48px;border-radius: 10px;">
         <mat-icon>logout</mat-icon>
         Logout
       </button>
@@ -73,7 +73,7 @@
 
     <mat-card class="stat-card">
       <mat-card-content>
-        <div class="stat-label">Bookings</div>
+        <div class="stat-label">Purchase</div>
         <div class="stat-value">{{ bookings }}</div>
       </mat-card-content>
     </mat-card>
@@ -169,7 +169,6 @@
                   <mat-option value="QUALIFIED">Qualified</mat-option>
                   <mat-option value="SITE_VISIT_SCHEDULED">Site Visit Scheduled</mat-option>
                   <mat-option value="SITE_VISITED">Site Visit Completed</mat-option>
-                  <mat-option value="NEGOTIATION">Negotiation / Booking</mat-option>
                   <mat-option value="CLOSED_WON">Closed Won (Purchase)</mat-option>
                   <mat-option value="CLOSED_LOST">Closed Lost (Junk)</mat-option>
                 </mat-select>

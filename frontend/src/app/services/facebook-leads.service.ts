@@ -16,9 +16,13 @@ export interface Lead {
   metaLeadId?: string;
   createdAt: string;
   pendingStatus?: LeadStatus;
+  dealValue?: number;
+  currency?: string;
+
+  [key: string]: any;
 }
 
-export type LeadStatus = 'NEW' | 'CONTACTED' | 'INTERESTED' | 'SITE_VISIT_SCHEDULED' | 'SITE_VISITED' | 'BOOKED' | 'CLOSED';
+export type LeadStatus = 'NEW' | 'CONTACTED' | 'INTERESTED' | 'SITE_VISIT_SCHEDULED' | 'SITE_VISITED' | 'BOOKED' | 'CLOSED' | 'CLOSED_WON';
 
 @Injectable({
   providedIn: 'root'

@@ -275,84 +275,151 @@ export class FacebookLeadsComponent implements OnInit {
 	}
 
 	// Inside facebook-leads.component.ts
-	confirmStatusChange(lead: any) {
-		if (!lead.pendingStatus) return;
+confirmStatusChange(lead: Lead): void {
+  if (!lead.pendingStatus) return;
 
-		let dealValue: number | undefined = undefined;
-		let currency: string | undefined = undefined;
+  // ==========================================
+  // CLOSED WON
+  // ==========================================
 
-		// 1. Intercept if it's a Purchase
-		if (lead.pendingStatus === "CLOSED_WON") {
-			const input = prompt(
-				"🎉 Deal closed! Please enter the final sale amount:",
-			);
+  if (lead.pendingStatus === "CLOSED_WON") {
 
-			if (input === null) {
-				this.cancelStatusChange(lead);
-				return;
-			}
+    const dialogRef = this.dialog.open(DealAmountDialogComponent, {
+      width: "400px",
+      disableClose: true,
+    });
 
-			dealValue = parseFloat(input);
-			if (isNaN(dealValue) || dealValue <= 0) {
-				alert("Invalid amount. Please try again with a valid number.");
-				this.cancelStatusChange(lead);
-				return;
-			}
+    dialogRef.afterClosed().subscribe((result) => {
 
-			currency = "INR"; // Set your default currency here
-		}
+      // User cancelled the dialog
+      if (result === undefined || result === null) {
+        this.cancelStatusChange(lead);
+        return;
+      }
 
-		// 2. Call your updated service with the specific parameters
-		this.leadService
-			.updateLeadStatus(
-				lead._id || lead.id,
-				lead.pendingStatus,
-				dealValue,
-				currency,
-			)
-			.subscribe({
-				next: () => {
-					// Save new status
-					lead.status = lead.pendingStatus;
+      const dealValue = Number(result);
 
-					// Save deal information if available
-					if (dealValue !== undefined) {
-						lead.dealValue = dealValue;
-						lead.currency = currency;
-					}
+      // Validate amount
+      if (isNaN(dealValue) || dealValue <= 0) {
 
-					// Clear pending status
-					lead.pendingStatus = null;
+        this.snackBar.open(
+          "⚠ Invalid amount. Please enter a valid sale amount.",
+          "Close",
+          {
+            duration: 2500,
+            horizontalPosition: "center",
+            verticalPosition: "top",
+          }
+        );
 
-					// ==========================================
-					// SUCCESS MESSAGE
-					// ==========================================
+        this.cancelStatusChange(lead);
+        return;
+      }
 
-					this.snackBar.open("✓ Status changed successfully", "", {
-						duration: 1000,
-						horizontalPosition: "center",
-						verticalPosition: "top",
-					});
-				},
+      const currency = "INR";
 
-				error: (err) => {
-					console.error("Failed to update lead:", err);
+      this.leadService
+        .updateLeadStatus(
+          lead._id,
+          "CLOSED_WON",
+          dealValue,
+          currency
+        )
+        .subscribe({
 
-					this.snackBar.open(
-						"✕ Failed to update lead status",
-						"Close",
-						{
-							duration: 2000,
-							horizontalPosition: "center",
-							verticalPosition: "top",
-						},
-					);
+          next: () => {
 
-					this.cancelStatusChange(lead);
-				},
-			});
-	}
+            lead.status = "CLOSED_WON";
+            lead.dealValue = dealValue;
+            lead.currency = currency;
 
+            delete lead.pendingStatus;
+
+            this.snackBar.open(
+              "✓ Deal closed successfully",
+              "",
+              {
+                duration: 1000,
+                horizontalPosition: "center",
+                verticalPosition: "top",
+              }
+            );
+          },
+
+          error: (err) => {
+
+            console.error(
+              "Failed to update lead:",
+              err
+            );
+
+            this.snackBar.open(
+              "✕ Failed to close deal",
+              "Close",
+              {
+                duration: 2000,
+                horizontalPosition: "center",
+                verticalPosition: "top",
+              }
+            );
+
+            this.cancelStatusChange(lead);
+          },
+        });
+    });
+
+    return;
+  }
+
+  // ==========================================
+  // NORMAL STATUS UPDATE
+  // ==========================================
+
+  this.leadService
+    .updateLeadStatus(
+      lead._id,
+      lead.pendingStatus
+    )
+    .subscribe({
+
+      next: () => {
+
+        lead.status = lead.pendingStatus!;
+
+        delete lead.pendingStatus;
+
+        this.snackBar.open(
+          "✓ Status changed successfully",
+          "",
+          {
+            duration: 1000,
+            horizontalPosition: "center",
+            verticalPosition: "top",
+          }
+        );
+      },
+
+      error: (err) => {
+
+        console.error(
+          "Failed to update lead:",
+          err
+        );
+
+        this.snackBar.open(
+          "✕ Failed to update lead status",
+          "Close",
+          {
+            duration: 2000,
+            horizontalPosition: "center",
+            verticalPosition: "top",
+          }
+        );
+
+        this.cancelStatusChange(lead);
+      },
+    });
+}
 	// =========================
 	// CANCEL STATUS CHANGE
 	// =========================

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,6 +16,7 @@ import { AuthService } from '../services/auth.service';
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MatButtonModule,
     MatCardModule,
     MatIconModule,
@@ -31,6 +33,7 @@ export class FacebookPagesComponent implements OnInit {
   isLoading = false;
   isPixelLoading = false;
   metaConnected = false;
+  private selectedPixelIds: { [pageId: string]: string } = {};
 
   displayedColumns: string[] = ['pageId', 'name', 'pixel', 'actions'];
 
@@ -73,13 +76,25 @@ export class FacebookPagesComponent implements OnInit {
     this.metaAuthService.getPages().subscribe({
       next: (res) => {
         const responseData = res.data;
+        let newPages: any[] = [];
         if (Array.isArray(responseData)) {
-          this.pages = responseData;
+          newPages = responseData;
         } else if (responseData && Array.isArray(responseData.data)) {
-          this.pages = responseData.data;
+          newPages = responseData.data;
         } else {
-          this.pages = [];
+          newPages = [];
         }
+
+        newPages = newPages.map((page) => {
+          const savedPixelId = this.selectedPixelIds[page.pageId];
+          if (savedPixelId) {
+            return { ...page, pixelId: savedPixelId };
+          }
+          return page;
+        });
+
+        this.pages = newPages;
+
         if (res.availablePixels && res.availablePixels.length > 0) {
           this.pixels = res.availablePixels;
         }
@@ -92,8 +107,9 @@ export class FacebookPagesComponent implements OnInit {
     });
   }
 
-  onPixelChange(page: any, event: any): void {
-    const selectedPixelId = event.target.value;
+  onPixelChange(page: any, selectedPixelId: string): void {
+    this.selectedPixelIds[page.pageId] = selectedPixelId;
+
     this.metaAuthService.setPagePixel(page.pageId, selectedPixelId).subscribe({
       next: () => {
         this.snackBar.open('Pixel updated successfully', '', {
