@@ -10,6 +10,7 @@ const connectdb = require("./config/db");
 const leadRoutes = require("./routes/lead.routes");
 const metaRoutes = require("./routes/meta.routes");
 const axios = require("axios");
+const webhookRoutes=require("./routes/webhook.routes")
 
 dotenv.config();
 connectdb();
@@ -51,8 +52,10 @@ app.get("/", (req, res) => {
 	res.json("API working");
 });
 
+//routes
 app.use("/api/leads", leadRoutes);
 app.use("/api/meta", metaRoutes);
+app.use("/api/webhook", webhookRoutes);
 
 // Helper function: Prevents the health check from hanging if a service is unresponsive
 const withTimeout = (promise, ms) => {

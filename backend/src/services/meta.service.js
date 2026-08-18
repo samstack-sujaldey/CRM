@@ -221,6 +221,31 @@ const getAllUserPixelsAndDatasets = async (userAccessToken) => {
 	return uniquePixels;
 };
 
+const subscribePageToWebhook = async (pageId, pageAccessToken) => {
+	if (!pageId || !pageAccessToken) {
+		throw new Error("Page ID and Page Access Token are required to subscribe to webhooks");
+	}
+	try {
+		const response = await axios.post(
+			`https://graph.facebook.com/${apiVersion}/${pageId}/subscribed_apps`,
+			null,
+			{
+				params: {
+					access_token: pageAccessToken,
+					subscribed_fields: "leadgen",
+				},
+			},
+		);
+		return response.data;
+	} catch (error) {
+		console.warn(
+			`[Webhook Subscription Warning] Failed to subscribe page ${pageId}:`,
+			error.response?.data?.error?.message || error.message,
+		);
+		return null;
+	}
+};
+
 module.exports = {
 	getMetaUser,
 	getPages,
@@ -228,4 +253,5 @@ module.exports = {
 	getFormLeads,
 	exchangeLongLivedToken,
 	getAllUserPixelsAndDatasets,
+	subscribePageToWebhook
 };

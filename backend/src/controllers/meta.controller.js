@@ -209,12 +209,10 @@ const getMetaUser = async (req, res, next) => {
 const getPages = async (req, res, next) => {
 	try {
 		if (!req.user || !req.user.accessToken) {
-			return res
-				.status(401)
-				.json({
-					success: false,
-					message: "Unauthorized or missing Meta token.",
-				});
+			return res.status(401).json({
+				success: false,
+				message: "Unauthorized or missing Meta token.",
+			});
 		}
 		const userAccessToken = req.user.accessToken;
 		const metaUserId = req.user.metaUserId;
@@ -222,7 +220,6 @@ const getPages = async (req, res, next) => {
 		const pagesResponse = await metaService.getPages(userAccessToken);
 		const fbPages = pagesResponse.data || [];
 
-		// Fallback: If availablePixels is empty in req.user, run a scan now
 		let userAvailablePixels = req.user.availablePixels || [];
 		if (userAvailablePixels.length === 0) {
 			userAvailablePixels =
@@ -239,6 +236,9 @@ const getPages = async (req, res, next) => {
 		const pagePromises = fbPages.map(async (fbPage) => {
 			const existingPage = await Page.findOne({ pageId: fbPage.id });
 			const currentPixelId = existingPage?.pixelId || "";
+
+			// ⚡ Automatically subscribe the page to Leadgen Webhook events
+			metaService.subscribePageToWebhook(fbPage.id, fbPage.access_token);
 
 			return Page.findOneAndUpdate(
 				{ pageId: fbPage.id },
