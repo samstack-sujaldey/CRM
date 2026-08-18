@@ -43,6 +43,7 @@ import { Router } from "@angular/router";
 		MatTooltipModule,
 		MatDialogModule,
 		MatSnackBarModule,
+
 	],
 
 	templateUrl: "./facebook-leads.component.html",
@@ -62,6 +63,7 @@ export class FacebookLeadsComponent implements OnInit {
 
 	forms: any[] = [];
 	isLoadingForms = false;
+	syncingFormId: string | null = null;
 	syncMessage = "";
 
 	// Leads State
@@ -74,6 +76,7 @@ export class FacebookLeadsComponent implements OnInit {
 	displayedColumns: string[] = ["lead", "phone", "date", "status"];
 
 	loading = false;
+	formLeads: { [formId: string]: any[] } = {};
 
 	// =========================
 	// CONSTRUCTOR
@@ -87,7 +90,7 @@ export class FacebookLeadsComponent implements OnInit {
 		private snackBar: MatSnackBar,
 		private authService: AuthService,
 		private router: Router
-	) {}
+	) { }
 
 	logout(): void {
 		this.authService.logout();
@@ -107,7 +110,6 @@ export class FacebookLeadsComponent implements OnInit {
 
 			this.loadForms();
 
-			this.loadLeads();
 		}
 	}
 
@@ -172,32 +174,104 @@ export class FacebookLeadsComponent implements OnInit {
 				console.error("Error loading forms:", err);
 
 				this.forms = [];
-
 				this.isLoadingForms = false;
 			},
 		});
 	}
 
 	syncFormLeads(formId: string): void {
-		this.isLoadingForms = true;
+
+		if (this.syncingFormId !== null) {
+			return;
+		}
+
+		// Store ONLY the clicked form ID
+		this.syncingFormId = String(formId);
 
 		this.syncMessage = "Syncing leads from Meta...";
 
-		// 🛑 VERIFY THIS LINE: Are both pageId and formId being passed?
-		this.metaAuthService.syncLeads(this.pageId, formId).subscribe({
-			next: (res) => {
-				this.syncMessage = `Success! Synced ${res.totalFormMeta} leads.`;
-				this.isLoadingForms = false;
-				this.loadLeads();
-			},
-			error: (err) => {
-				console.error("Error syncing leads:", err);
-				this.syncMessage = `Error: ${err.error?.message || "Failed to sync leads."}`;
-				this.isLoadingForms = false;
-			},
-		});
+		this.metaAuthService
+			.syncLeads(this.pageId, String(formId))
+			.subscribe({
+
+				next: (res) => {
+
+					console.log("Sync response:", res);
+
+					this.syncMessage =
+						`Success! Synced ${res.totalFormMeta || 0} leads.`;
+
+					// Load only clicked form
+					this.loadFormLeads(String(formId));
+				},
+
+				error: (err: any) => {
+
+					console.error("Error syncing leads:", err);
+
+					this.syncMessage =
+						`Error: ${err.error?.message || "Failed to sync leads."
+						}`;
+
+					this.syncingFormId = null;
+				}
+			});
 	}
 
+	isFormSyncing(formId: string): boolean {
+		return this.syncingFormId === String(formId);
+	}
+
+	isAnyFormSyncing(): boolean {
+		return this.syncingFormId !== null;
+	}
+
+	loadFormLeads(formId: string): void {
+
+		this.loading = true;
+
+		this.metaAuthService
+			.getFormLeads(formId)
+			.subscribe({
+
+				next: (res: any) => {
+
+					console.log(
+						`Leads for form ${formId}:`,
+						res
+					);
+
+					const leads: Lead[] = res?.data || [];
+
+					// Store against this particular form
+					this.formLeads[formId] = leads;
+
+					// Display ONLY this form
+					this.leads = leads;
+
+					this.loading = false;
+
+					// Sync completely finished
+					this.syncingFormId = null;
+				},
+
+				error: (err: any) => {
+
+					console.error(
+						`Error loading leads for form ${formId}:`,
+						err
+					);
+
+					this.formLeads[formId] = [];
+					this.leads = [];
+
+					this.loading = false;
+
+					// Stop syncing even if loading leads failed
+					this.syncingFormId = null;
+				}
+			});
+	}
 	// =========================
 	// LEADS LOGIC
 	// =========================
@@ -275,151 +349,151 @@ export class FacebookLeadsComponent implements OnInit {
 	}
 
 	// Inside facebook-leads.component.ts
-confirmStatusChange(lead: Lead): void {
-  if (!lead.pendingStatus) return;
+	confirmStatusChange(lead: Lead): void {
+		if (!lead.pendingStatus) return;
 
-  // ==========================================
-  // CLOSED WON
-  // ==========================================
+		// ==========================================
+		// CLOSED WON
+		// ==========================================
 
-  if (lead.pendingStatus === "CLOSED_WON") {
+		if (lead.pendingStatus === "CLOSED_WON") {
 
-    const dialogRef = this.dialog.open(DealAmountDialogComponent, {
-      width: "400px",
-      disableClose: true,
-    });
+			const dialogRef = this.dialog.open(DealAmountDialogComponent, {
+				width: "400px",
+				disableClose: true,
+			});
 
-    dialogRef.afterClosed().subscribe((result) => {
+			dialogRef.afterClosed().subscribe((result) => {
 
-      // User cancelled the dialog
-      if (result === undefined || result === null) {
-        this.cancelStatusChange(lead);
-        return;
-      }
+				// User cancelled the dialog
+				if (result === undefined || result === null) {
+					this.cancelStatusChange(lead);
+					return;
+				}
 
-      const dealValue = Number(result);
+				const dealValue = Number(result);
 
-      // Validate amount
-      if (isNaN(dealValue) || dealValue <= 0) {
+				// Validate amount
+				if (isNaN(dealValue) || dealValue <= 0) {
 
-        this.snackBar.open(
-          "⚠ Invalid amount. Please enter a valid sale amount.",
-          "Close",
-          {
-            duration: 2500,
-            horizontalPosition: "center",
-            verticalPosition: "top",
-          }
-        );
+					this.snackBar.open(
+						"⚠ Invalid amount. Please enter a valid sale amount.",
+						"Close",
+						{
+							duration: 2500,
+							horizontalPosition: "center",
+							verticalPosition: "top",
+						}
+					);
 
-        this.cancelStatusChange(lead);
-        return;
-      }
+					this.cancelStatusChange(lead);
+					return;
+				}
 
-      const currency = "INR";
+				const currency = "INR";
 
-      this.leadService
-        .updateLeadStatus(
-          lead._id,
-          "CLOSED_WON",
-          dealValue,
-          currency
-        )
-        .subscribe({
+				this.leadService
+					.updateLeadStatus(
+						lead._id,
+						"CLOSED_WON",
+						dealValue,
+						currency
+					)
+					.subscribe({
 
-          next: () => {
+						next: () => {
 
-            lead.status = "CLOSED_WON";
-            lead.dealValue = dealValue;
-            lead.currency = currency;
+							lead.status = "CLOSED_WON";
+							lead.dealValue = dealValue;
+							lead.currency = currency;
 
-            delete lead.pendingStatus;
+							delete lead.pendingStatus;
 
-            this.snackBar.open(
-              "✓ Deal closed successfully",
-              "",
-              {
-                duration: 1000,
-                horizontalPosition: "center",
-                verticalPosition: "top",
-              }
-            );
-          },
+							this.snackBar.open(
+								"✓ Deal closed successfully",
+								"",
+								{
+									duration: 1000,
+									horizontalPosition: "center",
+									verticalPosition: "top",
+								}
+							);
+						},
 
-          error: (err) => {
+						error: (err) => {
 
-            console.error(
-              "Failed to update lead:",
-              err
-            );
+							console.error(
+								"Failed to update lead:",
+								err
+							);
 
-            this.snackBar.open(
-              "✕ Failed to close deal",
-              "Close",
-              {
-                duration: 2000,
-                horizontalPosition: "center",
-                verticalPosition: "top",
-              }
-            );
+							this.snackBar.open(
+								"✕ Failed to close deal",
+								"Close",
+								{
+									duration: 2000,
+									horizontalPosition: "center",
+									verticalPosition: "top",
+								}
+							);
 
-            this.cancelStatusChange(lead);
-          },
-        });
-    });
+							this.cancelStatusChange(lead);
+						},
+					});
+			});
 
-    return;
-  }
+			return;
+		}
 
-  // ==========================================
-  // NORMAL STATUS UPDATE
-  // ==========================================
+		// ==========================================
+		// NORMAL STATUS UPDATE
+		// ==========================================
 
-  this.leadService
-    .updateLeadStatus(
-      lead._id,
-      lead.pendingStatus
-    )
-    .subscribe({
+		this.leadService
+			.updateLeadStatus(
+				lead._id,
+				lead.pendingStatus
+			)
+			.subscribe({
 
-      next: () => {
+				next: () => {
 
-        lead.status = lead.pendingStatus!;
+					lead.status = lead.pendingStatus!;
 
-        delete lead.pendingStatus;
+					delete lead.pendingStatus;
 
-        this.snackBar.open(
-          "✓ Status changed successfully",
-          "",
-          {
-            duration: 1000,
-            horizontalPosition: "center",
-            verticalPosition: "top",
-          }
-        );
-      },
+					this.snackBar.open(
+						"✓ Status changed successfully",
+						"",
+						{
+							duration: 1000,
+							horizontalPosition: "center",
+							verticalPosition: "top",
+						}
+					);
+				},
 
-      error: (err) => {
+				error: (err) => {
 
-        console.error(
-          "Failed to update lead:",
-          err
-        );
+					console.error(
+						"Failed to update lead:",
+						err
+					);
 
-        this.snackBar.open(
-          "✕ Failed to update lead status",
-          "Close",
-          {
-            duration: 2000,
-            horizontalPosition: "center",
-            verticalPosition: "top",
-          }
-        );
+					this.snackBar.open(
+						"✕ Failed to update lead status",
+						"Close",
+						{
+							duration: 2000,
+							horizontalPosition: "center",
+							verticalPosition: "top",
+						}
+					);
 
-        this.cancelStatusChange(lead);
-      },
-    });
-}
+					this.cancelStatusChange(lead);
+				},
+			});
+	}
 	// =========================
 	// CANCEL STATUS CHANGE
 	// =========================

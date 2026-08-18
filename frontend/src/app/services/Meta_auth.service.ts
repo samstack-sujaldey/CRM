@@ -82,6 +82,15 @@ export class MetaAuthService {
     return this.http.get(`${this.baseUrl}/pages`, { headers: this.getAuthHeaders() });
   }
 
+  getFormLeads( formId: string): Observable<any> {
+  return this.http.get(
+    `${this.baseUrl}/forms/${formId}/leads`,
+    {
+      headers: this.getAuthHeaders()
+    }
+  );
+}
+
   getPageForms(pageId: string): Observable<any> {
     return this.http.get(`${this.baseUrl}/pages/${pageId}/forms`, { headers: this.getAuthHeaders() });
   }

@@ -3,14 +3,15 @@
   <!-- ========================================== -->
   <!-- HEADER & FILTERS                           -->
   <!-- ========================================== -->
-  <div class="page-header" style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+  <div class="page-header"
+    style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
     <div>
       <h1 style="margin: 0;">Facebook Leads for Page: {{ pageName }}</h1>
       <p style="margin: 5px 0 0 0;">Manage lead forms and synced leads from your Meta campaigns</p>
     </div>
 
     <div class="header-actions" style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
-      
+
       <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
         <mat-label>Search leads</mat-label>
         <mat-icon matPrefix>search</mat-icon>
@@ -31,17 +32,18 @@
         </mat-select>
       </mat-form-field>
 
-      <button mat-stroked-button color="primary" routerLink="/facebook-pages" style=" background-color:rgb(143, 15, 143); color:whitesmoke; height: 48px;border-radius: 10px;">
+      <button mat-stroked-button color="primary" routerLink="/facebook-pages"
+        style=" height: 48px; border-radius: 10px;">
         <mat-icon>arrow_back</mat-icon>
         Back to Pages
       </button>
-      
-      <button mat-stroked-button color="warn" (click)="logout()" style="background-color: rgb(214, 60, 60);
-  color : white;height: 48px;border-radius: 10px;">
+
+      <button mat-stroked-button color="warn" (click)="logout()"
+        style="background-color: rgb(245, 86, 86); color: white; height: 48px; border-radius: 10px;">
         <mat-icon>logout</mat-icon>
         Logout
       </button>
-      
+
     </div>
   </div>
 
@@ -89,13 +91,14 @@
       <mat-card-subtitle>Sync leads from these active Meta forms</mat-card-subtitle>
     </mat-card-header>
 
-    <p *ngIf="syncMessage" style="padding-left: 15px;" [style.color]="syncMessage.includes('Success') ? 'green' : 'red'">
+    <p *ngIf="syncMessage" style="padding-left: 15px;"
+      [style.color]="syncMessage.includes('Success') ? 'green' : 'red'">
       <strong>{{ syncMessage }}</strong>
     </p>
 
     <div class="table-wrapper">
       <table mat-table [dataSource]="forms" *ngIf="forms.length > 0">
-        
+
         <!-- FORM NAME -->
         <ng-container matColumnDef="formName">
           <th mat-header-cell *matHeaderCellDef> Form Name </th>
@@ -106,8 +109,15 @@
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef> Action </th>
           <td mat-cell *matCellDef="let form">
-            <button mat-raised-button color="primary" (click)="syncFormLeads(form.formId || form.id)" [disabled]="isLoadingForms">
-              <mat-icon>sync</mat-icon> Sync Leads
+            <button type="button" mat-raised-button color="primary" (click)="syncFormLeads(form.formId || form.id)"
+              [disabled]="isFormSyncing(form.formId || form.id)">
+
+              <!-- Icon for other forms -->
+              <mat-icon *ngIf="!isFormSyncing(form.formId || form.id)">sync</mat-icon>
+
+              <span>
+                {{ isFormSyncing(form.formId || form.id) ? 'Syncing...' : 'Sync Leads' }}
+              </span>
             </button>
           </td>
         </ng-container>
@@ -163,7 +173,8 @@
           <td mat-cell *matCellDef="let lead">
             <div class="status-container">
               <mat-form-field appearance="outline" class="status-select">
-                <mat-select [value]="lead.pendingStatus || lead.status" (selectionChange)="selectStatus(lead, $event.value)">
+                <mat-select [value]="lead.pendingStatus || lead.status"
+                  (selectionChange)="selectStatus(lead, $event.value)">
                   <mat-option value="NEW">New</mat-option>
                   <mat-option value="CONTACTED">Contacted</mat-option>
                   <mat-option value="QUALIFIED">Qualified</mat-option>
@@ -176,10 +187,12 @@
 
               <!-- CONFIRM / CANCEL -->
               <ng-container *ngIf="lead.pendingStatus && lead.pendingStatus !== lead.status">
-                <button mat-icon-button color="primary" class="confirm-button" matTooltip="Confirm" (click)="confirmStatusChange(lead)">
+                <button mat-icon-button color="primary" class="confirm-button" matTooltip="Confirm"
+                  (click)="confirmStatusChange(lead)">
                   <mat-icon>check</mat-icon>
                 </button>
-                <button mat-icon-button color="warn" class="cancel-button" matTooltip="Cancel" (click)="cancelStatusChange(lead)">
+                <button mat-icon-button color="warn" class="cancel-button" matTooltip="Cancel"
+                  (click)="cancelStatusChange(lead)">
                   <mat-icon>close</mat-icon>
                 </button>
               </ng-container>
