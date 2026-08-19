@@ -199,7 +199,7 @@ export class FacebookLeadsComponent implements OnInit {
 					console.log("Sync response:", res);
 
 					this.syncMessage =
-						`Success! Synced ${res.totalFormMeta || 0} leads.`;
+						`Success! Synced ${res.totalFormMeta || 0} new leads.`;
 
 					// Load only clicked form
 					this.loadFormLeads(String(formId));
