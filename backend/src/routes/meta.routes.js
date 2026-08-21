@@ -15,9 +15,9 @@ router.get("/me", authMiddleware, metaController.getMetaUser);
 router.get("/pages", authMiddleware, metaController.getPages);
 router.get("/pages/pixels", authMiddleware, metaController.getUserPixels);
 router.post(
-	"/pages/:pageId/pixel",
-	authMiddleware,
-	metaController.setPagePixel,
+  "/pages/:pageId/pixel",
+  authMiddleware,
+  metaController.setPagePixel,
 );
 router.get("/pages/:pageId/forms", authMiddleware, metaController.getPageForms);
 router.get("/forms/:formId/leads", authMiddleware, metaController.getFormLeads);

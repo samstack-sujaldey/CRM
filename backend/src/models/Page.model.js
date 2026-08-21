@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 
 const pageSchema = new mongoose.Schema(
 	{
-		// NEW: Strict relational reference to your User/MetaConnection model
 		user: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "Meta",

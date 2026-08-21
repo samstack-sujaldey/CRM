@@ -24,8 +24,6 @@ const allowedOrigins = [
 
 const corsOptions = {
 	origin: function (origin, callback) {
-		// Allow requests with no origin
-		// (Postman, curl, server-to-server requests)
 		if (!origin) {
 			return callback(null, true);
 		}
@@ -45,7 +43,13 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(
+	express.json({
+		verify: (req, res, buf) => {
+			req.rawBody = buf;
+		},
+	})
+);
 
 app.get("/", (req, res) => {
 	res.json("API working");
@@ -94,7 +98,6 @@ app.get("/health", async (req, res) => {
 
 	let isHealthy = true;
 
-	// 1. Check MongoDB Connection
 	try {
 		const dbStart = Date.now();
 		// 1 = Connected. We check state first, then force a ping command to verify I/O.
@@ -112,7 +115,6 @@ app.get("/health", async (req, res) => {
 		isHealthy = false;
 	}
 
-	// 2. Check Meta Graph API Reachability
 	try {
 		const metaStart = Date.now();
 		const apiVersion = process.env.META_API_VERSION || "v26.0";
@@ -133,7 +135,6 @@ app.get("/health", async (req, res) => {
 		isHealthy = false;
 	}
 
-	// 3. Finalize Status Code
 	if (!isHealthy) {
 		healthcheck.status = "DEGRADED";
 		// 503 Service Unavailable explicitly tells Load Balancers to stop routing traffic here

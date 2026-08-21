@@ -6,7 +6,6 @@ const leadSchema = new mongoose.Schema(
 			type: String,
 			index: true,
 		},
-		// NEW: Reference to the Page collection
 		page: {
 			type: mongoose.Schema.Types.ObjectId,
 			ref: "Page",
@@ -66,7 +65,7 @@ const leadSchema = new mongoose.Schema(
     },
     currency: {
       type: String,
-      default: "INR", // Or "USD", depending on your default
+      default: "INR", 
     },
     notes: {
       type: String,

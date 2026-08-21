@@ -147,7 +147,7 @@ const metaAuthCallback = async (req, res) => {
 				pixelId: connection.pixelId || defaultPixelId,
 			});
 			console.log(
-				`[OAuth Success] Attached default pixel: ${defaultPixelId || "None found"}`,
+				`[OAuth Successful] || "None found"}`,
 			);
 		} catch (pixelErr) {
 			console.warn(
@@ -487,7 +487,7 @@ const syncLeads = async (req, res, next) => {
 	}
 };
 
-// 1. GET: Webhook Verification (Handshake with Meta)
+
 const verifyWebhook = (req, res) => {
 	const mode = req.query["hub.mode"];
 	const token = req.query["hub.verify_token"];
@@ -505,10 +505,33 @@ const verifyWebhook = (req, res) => {
 	}
 };
 
-// 2. POST: Real-Time Lead Ingestion Webhook
+const isValidWebhookSignature = (req) => {
+	const signatureHeader = req.headers["x-hub-signature-256"];
+	if (!signatureHeader || !req.rawBody) return false;
+
+	const expectedHash = crypto
+		.createHmac("sha256", process.env.META_APP_SECRET)
+		.update(req.rawBody)
+		.digest("hex");
+	const expectedSignature = `sha256=${expectedHash}`;
+
+	try {
+		return crypto.timingSafeEqual(
+			Buffer.from(signatureHeader),
+			Buffer.from(expectedSignature),
+		);
+	} catch {
+		return false; 
+	}
+};
+
 const handleWebhook = async (req, res) => {
-	// Acknowledge Meta immediately with 200 OK so Meta doesn't retry/time out
 	res.status(200).send("EVENT_RECEIVED");
+
+	if (!isValidWebhookSignature(req)) {
+		console.warn("[Webhook] Invalid signature — ignoring payload");
+		return;
+	}
 
 	try {
 		const body = req.body;
