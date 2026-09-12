@@ -60,7 +60,10 @@ const getFormLeads = async (formId, pageAccessToken) => {
   try {
     const response = await axios.get(
       `https://graph.facebook.com/${apiVersion}/${formId}/leads`,
-      { headers: { Authorization: `Bearer ${pageAccessToken}` } },
+      {
+        headers: { Authorization: `Bearer ${pageAccessToken}` },
+        params: { fields: "id,created_time,field_data,form_id" },
+      },
     );
     return response.data;
   } catch (error) {
@@ -111,7 +114,6 @@ const getAllUserPixelsAndDatasets = async (userAccessToken) => {
     //console.log(`[Meta Debug] Found ${adAccounts.length} Ad Accounts`);
 
     for (const acc of adAccounts) {
-      
       // Check Pixels
       try {
         const pxRes = await axios.get(
@@ -127,7 +129,10 @@ const getAllUserPixelsAndDatasets = async (userAccessToken) => {
           }),
         );
       } catch (e) {
-        console.log("Unable to fetch pixels ", e.response?.data?.error?.message);
+        console.log(
+          "Unable to fetch pixels ",
+          e.response?.data?.error?.message,
+        );
       }
     }
   } catch (err) {
@@ -147,7 +152,6 @@ const getAllUserPixelsAndDatasets = async (userAccessToken) => {
     // console.log(`[Meta Debug] Found ${businesses.length} Business Portfolios`);
 
     for (const biz of businesses) {
-
       // Check Business Owned Pixels
       try {
         const pxRes = await axios.get(
@@ -163,7 +167,10 @@ const getAllUserPixelsAndDatasets = async (userAccessToken) => {
           }),
         );
       } catch (e) {
-        console.log("No business owne pixels found ",e.response?.data?.error?.message);
+        console.log(
+          "No business owne pixels found ",
+          e.response?.data?.error?.message,
+        );
       }
     }
   } catch (err) {
@@ -191,6 +198,7 @@ const getLeadDetails = async (leadId, pageAccessToken) => {
       `https://graph.facebook.com/${apiVersion}/${leadId}`,
       {
         headers: { Authorization: `Bearer ${pageAccessToken}` },
+        params: { fields: "id,created_time,field_data,form_id" },
       },
     );
     return response.data;

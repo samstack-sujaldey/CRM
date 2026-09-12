@@ -1,52 +1,88 @@
 <div class="page-container">
-
   <!-- ========================================== -->
   <!-- HEADER & FILTERS                           -->
   <!-- ========================================== -->
-  <div class="page-header"
-    style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+  <div
+    class="page-header"
+    style="
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 24px;
+    "
+  >
     <div>
-      <h1 style="margin: 0;">Facebook Leads for Page: {{ pageName }}</h1>
-      <p style="margin: 5px 0 0 0;">Manage lead forms and synced leads from your Meta campaigns</p>
+      <h1 style="margin: 0">Facebook Leads for Page: {{ pageName }}</h1>
+      <p style="margin: 5px 0 0 0">
+        Manage lead forms and synced leads from your Meta campaigns
+      </p>
     </div>
 
-    <div class="header-actions" style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
-
-      <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+    <div
+      class="header-actions"
+      style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap"
+    >
+      <mat-form-field
+        appearance="outline"
+        class="search-field"
+        subscriptSizing="dynamic"
+      >
         <mat-label>Search leads</mat-label>
         <mat-icon matPrefix>search</mat-icon>
-        <input matInput [(ngModel)]="searchText" placeholder="Name, phone or email">
+        <input
+          matInput
+          [(ngModel)]="searchText"
+          placeholder="Name, phone or email"
+        />
       </mat-form-field>
 
-      <mat-form-field appearance="outline" class="status-filter" subscriptSizing="dynamic">
+      <mat-form-field
+        appearance="outline"
+        class="status-filter"
+        subscriptSizing="dynamic"
+      >
         <mat-label>Status</mat-label>
         <mat-select [(ngModel)]="selectedStatus">
           <mat-option value="ALL">All Status</mat-option>
           <mat-option value="NEW">New</mat-option>
           <mat-option value="CONTACTED">Contacted</mat-option>
           <mat-option value="QUALIFIED">Qualified</mat-option>
-          <mat-option value="SITE_VISIT_SCHEDULED">Site Visit Scheduled</mat-option>
+          <mat-option value="SITE_VISIT_SCHEDULED"
+            >Site Visit Scheduled</mat-option
+          >
           <mat-option value="SITE_VISITED">Site Visit Completed</mat-option>
           <mat-option value="CLOSED_WON">Closed Won (Purchase)</mat-option>
           <mat-option value="CLOSED_LOST">Closed Lost (Junk)</mat-option>
         </mat-select>
       </mat-form-field>
 
-      <button mat-stroked-button color="primary" routerLink="/facebook-pages"
-        style=" height: 48px; border-radius: 10px;">
+      <button
+        mat-stroked-button
+        color="primary"
+        routerLink="/facebook-pages"
+        style="height: 48px; border-radius: 10px"
+      >
         <mat-icon>arrow_back</mat-icon>
         Back to Pages
       </button>
 
-      <button mat-stroked-button color="warn" (click)="logout()"
-        style="background-color: rgb(245, 86, 86); color: white; height: 48px; border-radius: 10px;">
+      <button
+        mat-stroked-button
+        color="warn"
+        (click)="logout()"
+        style="
+          background-color: rgb(245, 86, 86);
+          color: white;
+          height: 48px;
+          border-radius: 10px;
+        "
+      >
         <mat-icon>logout</mat-icon>
         Logout
       </button>
-
     </div>
   </div>
-
 
   <!-- ========================================== -->
   <!-- STATISTICS GRID                            -->
@@ -81,58 +117,98 @@
     </mat-card>
   </div>
 
-
   <!-- ========================================== -->
   <!-- LEAD FORMS                                 -->
   <!-- ========================================== -->
-  <mat-card class="table-card" style="margin-bottom: 24px;">
-    <mat-card-header style="padding: 15px 15px 0 15px;">
+  <mat-card class="table-card" style="margin-bottom: 24px">
+    <mat-card-header style="padding: 15px 15px 0 15px">
       <mat-card-title>Available Lead Forms</mat-card-title>
-      <mat-card-subtitle>Sync leads from these active Meta forms</mat-card-subtitle>
+      <mat-card-subtitle
+        >Sync leads from these active Meta forms</mat-card-subtitle
+      >
     </mat-card-header>
 
-    <p *ngIf="syncMessage" style="padding-left: 15px;"
-      [style.color]="syncMessage.includes('Success') ? 'green' : 'red'">
+    <p
+      *ngIf="syncMessage"
+      style="padding-left: 15px"
+      [style.color]="syncMessage.includes('Success') ? 'green' : 'red'"
+    >
       <strong>{{ syncMessage }}</strong>
     </p>
 
     <div class="table-wrapper">
       <table mat-table [dataSource]="forms" *ngIf="forms.length > 0">
-
         <!-- FORM NAME -->
         <ng-container matColumnDef="formName">
-          <th mat-header-cell *matHeaderCellDef> Form Name </th>
-          <td mat-cell *matCellDef="let form"> <strong>{{ form.name }}</strong> </td>
+          <th mat-header-cell *matHeaderCellDef>Form Name</th>
+          <td mat-cell *matCellDef="let form">
+            <strong>{{ form.name }}</strong>
+          </td>
         </ng-container>
 
         <!-- ACTION -->
         <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef> Action </th>
+          <th mat-header-cell *matHeaderCellDef>Action</th>
           <td mat-cell *matCellDef="let form">
-            <button type="button" mat-raised-button color="primary" (click)="syncFormLeads(form.formId || form.id)"
-              [disabled]="isFormSyncing(form.formId || form.id)">
+            <div class="action-buttons-container">
+              <!-- Existing Sync Button -->
+              <button
+                type="button"
+                mat-raised-button
+                color="primary"
+                (click)="syncFormLeads(form.formId || form.id)"
+                [disabled]="isFormSyncing(form.formId || form.id)"
+              >
+                <mat-icon *ngIf="!isFormSyncing(form.formId || form.id)"
+                  >sync</mat-icon
+                >
+                <span>
+                  {{
+                    isFormSyncing(form.formId || form.id)
+                      ? "Syncing..."
+                      : "Sync Leads"
+                  }}
+                </span>
+              </button>
 
-              <!-- Icon for other forms -->
-              <mat-icon *ngIf="!isFormSyncing(form.formId || form.id)">sync</mat-icon>
+              <div class="cron-controls">
+                <button
+                  type="button"
+                  mat-stroked-button
+                  color="primary"
+                  *ngIf="!form.isCronActive"
+                  (click)="setCron(form)"
+                >
+                  Set CRON
+                </button>
 
-              <span>
-                {{ isFormSyncing(form.formId || form.id) ? 'Syncing...' : 'Sync Leads' }}
-              </span>
-            </button>
+                <button
+                  type="button"
+                  mat-stroked-button
+                  color="warn"
+                  *ngIf="form.isCronActive"
+                  (click)="disableCron(form)"
+                >
+                  Disable CRON
+                </button>
+              </div>
+            </div>
           </td>
         </ng-container>
 
         <!-- FORM TABLE ROWS -->
         <tr mat-header-row *matHeaderRowDef="['formName', 'actions']"></tr>
-        <tr mat-row *matRowDef="let row; columns: ['formName', 'actions'];"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['formName', 'actions']"></tr>
       </table>
 
-      <div *ngIf="forms.length === 0 && !isLoadingForms" style="padding: 20px; text-align: center;">
+      <div
+        *ngIf="forms.length === 0 && !isLoadingForms"
+        style="padding: 20px; text-align: center"
+      >
         No active lead forms found for this page.
       </div>
     </div>
   </mat-card>
-
 
   <!-- ========================================== -->
   <!-- LEADS TABLE                                -->
@@ -140,13 +216,12 @@
   <mat-card class="table-card">
     <div class="table-wrapper">
       <table mat-table [dataSource]="filteredLeads">
-
         <!-- LEAD -->
         <ng-container matColumnDef="lead">
-          <th mat-header-cell *matHeaderCellDef> Lead </th>
+          <th mat-header-cell *matHeaderCellDef>Lead</th>
           <td mat-cell *matCellDef="let lead">
             <div class="lead-cell">
-              <div class="avatar">{{ lead.name?.charAt(0) || '?' }}</div>
+              <div class="avatar">{{ lead.name?.charAt(0) || "?" }}</div>
               <div class="lead-details">
                 <strong>{{ lead.name }}</strong>
                 <span>{{ lead.email }}</span>
@@ -157,49 +232,105 @@
 
         <!-- PHONE -->
         <ng-container matColumnDef="phone">
-          <th mat-header-cell *matHeaderCellDef> Phone </th>
-          <td mat-cell *matCellDef="let lead">{{ lead.phone }}</td>
-        </ng-container>
+          <th mat-header-cell *matHeaderCellDef>Phone</th>
+          <td mat-cell *matCellDef="let lead">
+            <span
+              [style.color]="lead.phone ? 'inherit' : '#9ca3af'"
+              [style.font-style]="lead.phone ? 'normal' : 'italic'"
+              [style.font-size]="lead.phone ? 'inherit' : '0.9em'"
+            >
+              {{ lead.phone || "No number provided" }}
+            </span>
+          </td></ng-container
+        >
 
         <!-- DATE -->
         <ng-container matColumnDef="date">
-          <th mat-header-cell *matHeaderCellDef> Date </th>
-          <td mat-cell *matCellDef="let lead">{{ lead.createdAt | date:'dd/MM/yyyy' }}</td>
+          <th mat-header-cell *matHeaderCellDef>Date</th>
+          <td mat-cell *matCellDef="let lead">
+            {{
+              lead.metaCreatedAt || lead.createdeAt
+                | date: "dd/MM/yyyy, hh:mm a" : "+0530"
+            }}
+          </td>
         </ng-container>
 
         <!-- STATUS -->
         <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef> Status </th>
+          <th mat-header-cell *matHeaderCellDef>Status</th>
           <td mat-cell *matCellDef="let lead">
             <div class="status-container">
-              <mat-form-field appearance="outline" class="status-select">
-                <mat-select [value]="lead.pendingStatus || lead.status"
-                  (selectionChange)="selectStatus(lead, $event.value)">
+              <!-- ADDED subscriptSizing="dynamic" here to fix alignment -->
+              <mat-form-field
+                appearance="outline"
+                class="status-select"
+                subscriptSizing="dynamic"
+              >
+                <mat-select
+                  [value]="lead.pendingStatus || lead.status"
+                  (selectionChange)="selectStatus(lead, $event.value)"
+                >
                   <mat-option value="NEW">New</mat-option>
                   <mat-option value="CONTACTED">Contacted</mat-option>
                   <mat-option value="QUALIFIED">Qualified</mat-option>
-                  <mat-option value="SITE_VISIT_SCHEDULED">Site Visit Scheduled</mat-option>
-                  <mat-option value="SITE_VISITED">Site Visit Completed</mat-option>
-                  <mat-option value="CLOSED_WON">Closed Won (Purchase)</mat-option>
-                  <mat-option value="CLOSED_LOST">Closed Lost (Junk)</mat-option>
+                  <mat-option value="SITE_VISIT_SCHEDULED"
+                    >Site Visit Scheduled</mat-option
+                  >
+                  <mat-option value="SITE_VISITED"
+                    >Site Visit Completed</mat-option
+                  >
+                  <mat-option value="CLOSED_WON"
+                    >Closed Won (Purchase)</mat-option
+                  >
+                  <mat-option value="CLOSED_LOST"
+                    >Closed Lost (Junk)</mat-option
+                  >
                 </mat-select>
               </mat-form-field>
 
-              <!-- CONFIRM / CANCEL -->
-              <ng-container *ngIf="lead.pendingStatus && lead.pendingStatus !== lead.status">
-                <button mat-icon-button color="primary" class="confirm-button" matTooltip="Confirm"
-                  (click)="confirmStatusChange(lead)">
-                  <mat-icon>check</mat-icon>
+              <div class="status-actions">
+                <!-- ADDED color="primary" -->
+                <button
+                  *ngIf="
+                    !lead.pendingStatus || lead.pendingStatus === lead.status
+                  "
+                  mat-stroked-button
+                  color="primary"
+                  class="details-button"
+                  (click)="viewHistory(lead)"
+                >
+                  Details
                 </button>
-                <button mat-icon-button color="warn" class="cancel-button" matTooltip="Cancel"
-                  (click)="cancelStatusChange(lead)">
-                  <mat-icon>close</mat-icon>
-                </button>
-              </ng-container>
+
+                <!-- CONFIRM / CANCEL -->
+                <ng-container
+                  *ngIf="
+                    lead.pendingStatus && lead.pendingStatus !== lead.status
+                  "
+                >
+                  <button
+                    mat-icon-button
+                    color="primary"
+                    class="confirm-button"
+                    matTooltip="Confirm"
+                    (click)="confirmStatusChange(lead)"
+                  >
+                    <mat-icon>check</mat-icon>
+                  </button>
+                  <button
+                    mat-icon-button
+                    color="warn"
+                    class="cancel-button"
+                    matTooltip="Cancel"
+                    (click)="cancelStatusChange(lead)"
+                  >
+                    <mat-icon>close</mat-icon>
+                  </button>
+                </ng-container>
+              </div>
             </div>
           </td>
         </ng-container>
-
         <!-- TABLE HEADER -->
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
         <!-- TABLE ROW -->
@@ -207,11 +338,11 @@
 
         <!-- NO DATA -->
         <tr matNoDataRow>
-          <td class="mat-cell" [attr.colspan]="displayedColumns.length">No leads found.</td>
+          <td class="mat-cell" [attr.colspan]="displayedColumns.length">
+            No leads found.
+          </td>
         </tr>
-
       </table>
     </div>
   </mat-card>
-
 </div>
